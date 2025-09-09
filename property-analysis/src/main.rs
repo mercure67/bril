@@ -2,9 +2,16 @@ use bril_rs::*;
 use clap::Parser;
 use std::{collections::{HashMap, HashSet}, fs::File, io::BufReader};
 
+enum Mode {
+    
+}
+
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Args {
+    #[arg(required=true)]
+    mode: Option<String>,
+
     #[arg(value_hint = clap::ValueHint::FilePath, required=true)]
     filename: Option<std::path::PathBuf>,
 }
@@ -50,6 +57,10 @@ fn main() {
         Err(why) => panic!("{}", why),
         Ok(v) => v,
     };
+
+    match args.mode.expect("") {
+        mode => 
+    }
 
     let set = build_var_set(v);
     print!("{:?}", set);
