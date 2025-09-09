@@ -1,16 +1,22 @@
 use bril_rs::*;
-use clap::Parser;
-use std::{collections::{HashMap, HashSet}, fs::File, io::BufReader};
+use clap::{Parser, ValueEnum};
+use std::{
+    collections::{HashMap, HashSet},
+    fs::File,
+    io::BufReader,
+};
 
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 enum Mode {
-    
+    #[value(name = "varset")]
+    VarSet,
 }
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Args {
-    #[arg(required=true)]
-    mode: Option<String>,
+    #[arg(required = true)]
+    mode: Option<Mode>,
 
     #[arg(value_hint = clap::ValueHint::FilePath, required=true)]
     filename: Option<std::path::PathBuf>,
@@ -25,7 +31,6 @@ fn build_var_set(v: Program) -> HashMap<String, HashSet<String>> {
                 Code::Instruction(Instruction::Constant { dest, .. })
                 | Code::Instruction(Instruction::Value { dest, .. }) => {
                     var_set.insert(format!("{dest}"));
-
                 }
                 _ => {}
             }
@@ -58,10 +63,10 @@ fn main() {
         Ok(v) => v,
     };
 
-    match args.mode.expect("") {
-        mode => 
+    match args.mode.expect("bad mode! this shouldn't normally happen") {
+        Mode::VarSet => {
+            let set = build_var_set(v);
+            print!("{:?}", set);
+        }
     }
-
-    let set = build_var_set(v);
-    print!("{:?}", set);
 }
