@@ -8,8 +8,8 @@ use std::{
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 enum Mode {
-    #[value(name = "varset")]
-    VarSet,
+    #[value(name = "varmap")]
+    VarMap,
 }
 
 #[derive(Parser)]
@@ -22,7 +22,7 @@ struct Args {
     filename: Option<std::path::PathBuf>,
 }
 
-fn build_var_set(v: Program) -> HashMap<String, HashSet<String>> {
+fn build_var_map(v: Program) -> HashMap<String, HashSet<String>> {
     let mut var_map = HashMap::new();
     for f in v.functions {
         let mut var_set = HashSet::new();
@@ -64,8 +64,8 @@ fn main() {
     };
 
     match args.mode.expect("bad mode! this shouldn't normally happen") {
-        Mode::VarSet => {
-            let set = build_var_set(v);
+        Mode::VarMap => {
+            let set = build_var_map(v);
             print!("{:?}", set);
         }
     }
