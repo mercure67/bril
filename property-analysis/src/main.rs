@@ -1,7 +1,7 @@
 use bril_rs::*;
 use clap::{Parser, ValueEnum};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     fs::File,
     io::BufReader,
 };
@@ -22,10 +22,10 @@ struct Args {
     filename: Option<std::path::PathBuf>,
 }
 
-fn build_var_map(v: Program) -> HashMap<String, HashSet<String>> {
-    let mut var_map = HashMap::new();
+fn build_var_map(v: Program) -> BTreeMap<String, BTreeSet<String>> {
+    let mut var_map = BTreeMap::new();
     for f in v.functions {
-        let mut var_set = HashSet::new();
+        let mut var_set = BTreeSet::new();
         for c in f.instrs {
             match c {
                 Code::Instruction(Instruction::Constant { dest, .. })

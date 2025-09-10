@@ -1,0 +1,4 @@
+@main() {
+  i: int = const 7;
+  j: int = const 8;
+}

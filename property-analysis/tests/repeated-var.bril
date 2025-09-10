@@ -1,0 +1,5 @@
+@main() {
+  i: int = const 7;
+  i: int = const 8;
+  print i;
+}

@@ -1,0 +1,1 @@
+command='tmp=$(mktemp /tmp/temp.XXXXXX.json); bril2json < {filename} > "$tmp"; cargo run -- varmap "$tmp"; rm -f "$tmp"'
