@@ -106,6 +106,14 @@ pub struct Function {
     pub return_type: Option<Type>,
 }
 
+impl std::hash::Hash for &Function {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+    }
+}
+
+impl std::cmp::Eq for &Function {}
+
 impl Display for Function {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "@{}", self.name)?;
