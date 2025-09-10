@@ -4,6 +4,6 @@
 }
 
 @main() {
-  j: int = const 2;
+  i: int = const 2;
   call @f;
 }
