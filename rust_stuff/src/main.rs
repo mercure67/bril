@@ -4,6 +4,9 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::{fs::File, io::BufReader};
 
+mod mrange;
+mod resolver;
+
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -60,6 +63,8 @@ fn get_used_labels<'a>(v: &'a bril_rs::Program) -> HashSet<String> {
 
 type Block<'a> = Vec<&'a Code>;
 
+type BlockNew<'a> = &'a [Code];
+
 trait BlockHelpers<'a> {
     fn get_terminator(&self) -> &'a Code;
 }
@@ -69,8 +74,6 @@ impl<'a> BlockHelpers<'a> for Block<'a> {
         self.last().unwrap()
     }
 }
-
-// refactor: move function iteration out
 
 fn form_basic_blocks<'a>(
     f: &'a bril_rs::Function,
@@ -115,6 +118,53 @@ fn form_basic_blocks<'a>(
     }
     if new_block.len() > 0 {
         blocks.push(Rc::new(new_block));
+    }
+    blocks
+}
+
+fn form_basic_blocks_new<'a>(
+    f: &'a bril_rs::Function,
+    used_labels: &HashSet<String>,
+) -> Vec<BlockNew<'a>> {
+    let mut blocks = Vec::<BlockNew>::new();
+    let mut block_range: (usize, usize) = (0, 0);
+    for instr in f.instrs.iter() {
+        match instr {
+            Code::Instruction(i) => {
+                block_range.1 = block_range.1 + 1;
+
+                match i {
+                    Instruction::Value { op, .. } => {
+                        if let ValueOps::Call = op {
+                            blocks.push(&f.instrs[block_range.0..block_range.1]);
+                            block_range = (block_range.1, block_range.1);
+                        }
+                    }
+                    Instruction::Effect { op, .. } => match op {
+                        EffectOps::Jump
+                        | EffectOps::Branch
+                        | EffectOps::Call
+                        | EffectOps::Return => {
+                            blocks.push(&f.instrs[block_range.0..block_range.1]);
+                            block_range = (block_range.1, block_range.1);
+                        }
+                        _ => (),
+                    },
+                    _ => (),
+                };
+            }
+            Code::Label { label, pos: _ } => {
+                if used_labels.contains(label) {
+                    if block_range.1 - block_range.0 > 0 {
+                        blocks.push(&f.instrs[block_range.0..block_range.1]);
+                    }
+                    block_range = (block_range.1, block_range.1 + 1);
+                }
+            }
+        }
+    }
+    if block_range.1 - block_range.0 > 0 {
+        blocks.push(&f.instrs[block_range.0..block_range.1]);
     }
     blocks
 }
@@ -266,6 +316,7 @@ fn form_cfg<'a>(info: &BlockInfo) -> CFG {
                             let mut ext: Vec<usize> = funcs
                                 .iter()
                                 .map(|x| {
+                                    // retrieve called function
                                     func_calls
                                         .entry(x.clone())
                                         .and_modify(|x| {
@@ -335,18 +386,20 @@ fn main() {
         Ok(v) => v,
     };
     // extract functions
-
+    /*
     let mut info = BlockInfo::default();
     info.populate(&v);
     info.display_blocks();
-
-    /*
-     */
 
     let cfg_res = form_cfg(&info);
     //println!("{:?}", cfg_res);
 
     info.display_cfg(&cfg_res);
+    */
+    let mut d = resolver::GlobalData::default();
+    d.initial_fill(&v);
+    d.form_blocks(&v);
+    d.print_blocks(&v);
     //println!("{:?}", blocks);
     //println!("{:?}", v.functions);
 }
