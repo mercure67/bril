@@ -1,40 +1,63 @@
-use crate::*;
-use std::collections::BTreeSet;
+use crate::resolver::*;
+use bril_rs::*;
 
+use std::collections::HashMap;
+
+// assume that there are not enough args for Vec sorting to take a long time
+
+#[derive(Hash, Eq, PartialEq)]
 pub enum Rval {
-    Const(bril_rs::Literal),
-    Value(bril_rs::ValueOps, BTreeSet<usize>), // op plus args: using a btreeset sorts by default
-    Consumer(BTreeSet<usize>),                 // something with only rvals but nothing else
-    NoVal,                                     // no rval
+    Const {
+        const_type: bril_rs::Type,
+        raw_val: u64,
+    },
+    Value(bril_rs::ValueOps, Vec<usize>), // op plus args: using a btreeset sorts by default
+    Consumer(Vec<usize>),                 // something with only rvals but nothing else
+    NoVal,                                // no rval
 }
 
-// TODO: do consumers need dedicated handling?
-// TODO: handle id?
+use bril_rs::Literal;
 
-impl PartialEq for Rval {
-    fn eq(&self, other: &Self) -> bool {
-        // https://stackoverflow.com/questions/36297412/how-to-implement-partialeq-for-an-enum
-
-        match (self, other) {
-            (Rval::Const(a), Rval::Const(b)) => match (a, b) {
-                (bril_rs::Literal::Int(a), bril_rs::Literal::Int(b)) => a == b,
-                (bril_rs::Literal::Bool(a), bril_rs::Literal::Bool(b)) => a == b,
-                (bril_rs::Literal::Char(a), bril_rs::Literal::Char(b)) => a == b,
-                _ => false,
-            },
-            (Rval::Consumer(a), Rval::Consumer(b)) => a == b,
-            (Rval::Value(op_a, args_a), Rval::Value(op_b, args_b)) => {
-                (op_a == op_b) && (args_a == args_b)
-            }
-            _ => false,
+impl From<bril_rs::Literal> for Rval {
+    fn from(value: bril_rs::Literal) -> Self {
+        let (t, val) = match value {
+            bril_rs::Literal::Int(v) => (bril_rs::Type::Int, v.cast_unsigned()),
+            bril_rs::Literal::Float(v) => (bril_rs::Type::Float, v.to_bits()),
+            bril_rs::Literal::Char(c) => (bril_rs::Type::Char, c as u64),
+            bril_rs::Literal::Bool(b) => (bril_rs::Type::Bool, b as u64),
+        };
+        Self::Const {
+            const_type: t,
+            raw_val: val,
         }
     }
-    fn ne(&self, other: &Self) -> bool {
-        !self.eq(other)
+}
+
+impl TryInto<bril_rs::Literal> for Rval {
+    type Error = ();
+
+    fn try_into(self) -> Result<bril_rs::Literal, Self::Error> {
+        if let Rval::Const {
+            const_type: t,
+            raw_val: v,
+        } = self
+        {
+            return match t {
+                Type::Int => Ok(Literal::Int(v.cast_signed())),
+                Type::Bool => Ok(Literal::Bool(v != 0)),
+                Type::Float => Ok(bril_rs::Literal::Float(f64::from_bits(v))),
+                Type::Char => Ok(Literal::Char(char::from_u32(v as u32).unwrap())),
+                _ => Err(()),
+            };
+        }
+        Err(())
     }
 }
 
-impl Eq for Rval {}
+// TODO: encode function names in consumers, values
+// id is handled as a valueop
+//
+// NOTE: if the Consumer option causes trouble, it can most likely be removed. its goal is to remove redundant function calls.
 
 //TODO: handle the rename case
 // TODO: separate lval?
@@ -55,56 +78,40 @@ pub struct LVNTable {
 
 impl LVNTable {
     pub fn populate(&mut self, r: CodeRange, instrs: &Vec<Code>) {
-        for code in instrs[r.0..r.1] {
+        for code in instrs[r.0..r.1].into_iter() {
             // only accept instructions
             if let Code::Instruction(instr) = code {
-                // hash the expression
-                let mut dest = String::new();
-
-                let expr_val = match instr {
-                    Instruction::Constant {
-                        dest,
-                        op,
-                        pos,
-                        const_type,
-                        value,
-                    } => {
-                        dest = dest;
-                        Rval::Const(value)
+                // hash the expression into expr_val
+                // also obtain the destination name dest_n
+                let (expr_val, dest_n) = match instr {
+                    Instruction::Constant { dest, value, .. } => {
+                        (Rval::from(value.clone()), Some(dest.clone()))
                     }
                     Instruction::Value {
                         args,
                         dest,
                         funcs,
-                        labels,
                         op,
-                        pos,
-                        op_type,
+                        ..
                     } => {
-                        dest = dest;
-                        let mapped_args = args
-                            .iter()
-                            .map(|a| self.entries[self.remaps.get(a).unwrap().clone()])
-                            .collect();
+                        let mut mapped_args: Vec<usize> =
+                            args.iter().map(|a| *self.remaps.get(a).unwrap()).collect();
+                        mapped_args.sort();
 
-                        Rval::Value(op, BTreeSet::<usize>::from(mapped_args))
+                        (Rval::Value(op.clone(), mapped_args), Some(dest.clone()))
                     }
-                    Instruction::Effect {
-                        args,
-                        funcs,
-                        labels,
-                        op,
-                        pos,
-                    } => {
-                        let mapped_args = args
-                            .iter()
-                            .map(|a| self.entries[self.remaps.get(a).unwrap().clone()])
-                            .collect();
+                    Instruction::Effect { args, .. } => {
+                        let mut mapped_args: Vec<usize> =
+                            args.iter().map(|a| *self.remaps.get(a).unwrap()).collect();
+                        mapped_args.sort();
 
-                        Rval::Consumer(BTreeSet::<usize>::from(mapped_args))
+                        (Rval::Consumer(mapped_args), None)
                     }
-                    _ => Rval::NoVal,
+                    _ => (Rval::NoVal, None),
                 };
+
+                self.exprs.entry(expr_val);
+                // TODO: handle dest_n
             }
         }
     }
