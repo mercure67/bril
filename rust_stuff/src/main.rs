@@ -4,10 +4,10 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::{fs::File, io::BufReader};
 
+mod dce;
 mod lvn;
 mod mrange;
 mod resolver;
-mod dce;
 
 #[derive(Subcommand)]
 enum Task {
@@ -75,15 +75,15 @@ fn main() {
     d.initial_fill(&v);
     d.form_blocks(&v);
     //d.print_blocks(&v);
-    d.print_blocks_compliance(&v);
+    // d.print_blocks_compliance(&v);
 
     match args.task {
-        Task::DCE => (),
+        Task::DCE => println!("{}", dce::global_dce(&v, &d)),
         Task::LVN => (),
     };
 
     let c = d.form_cfg(&v);
-    d.print_cfg(&v, &c);
+    // d.print_cfg(&v, &c);
     //println!("{:?}", blocks);
     //println!("{:?}", v.functions);
 }

@@ -21,12 +21,12 @@ impl std::fmt::Display for CFGPos {
 // TODO: handle args
 #[derive(Default)]
 pub struct FunctionData {
-    funcno: usize,
-    callers: HashSet<CFGPos>,      // function plus blockno of callers
-    calls: HashMap<usize, String>, // map of line to function it calls
-    blocks: Vec<CodeRange>,
-    labels: HashMap<String, Blockno>,
-    returns: Vec<usize>,
+    pub funcno: usize,
+    pub callers: HashSet<CFGPos>,      // function plus blockno of callers
+    pub calls: HashMap<usize, String>, // map of line to function it calls
+    pub blocks: Vec<CodeRange>,
+    pub labels: HashMap<String, Blockno>,
+    pub returns: Vec<usize>,
 }
 
 impl FunctionData {
@@ -113,7 +113,7 @@ impl FunctionData {
 
 #[derive(Default)]
 pub struct GlobalData {
-    data_map: HashMap<String, FunctionData>,
+    pub data_map: HashMap<String, FunctionData>,
 }
 
 type CFG = HashMap<CFGPos, HashSet<CFGPos>>;

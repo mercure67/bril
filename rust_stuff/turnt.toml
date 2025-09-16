@@ -1,0 +1,1 @@
+command='tmp=$(mktemp /tmp/temp.XXXXXX.json); bril2json < {filename} > "$tmp"; target/debug/rust_stuff --mode file "$tmp" dce; rm -f "$tmp"'
