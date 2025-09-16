@@ -66,7 +66,6 @@ pub struct LVNEntry {
     name: String,
     entryno: usize,
     inst: bril_rs::Instruction,
-    expr: Rval,
 }
 
 #[derive(Default)]
@@ -77,13 +76,14 @@ pub struct LVNTable {
 }
 
 impl LVNTable {
-    pub fn populate(&mut self, r: CodeRange, instrs: &Vec<Code>) {
+    pub fn populate(&mut self, r: CodeRange, instrs: &Vec<Code>) -> Vec<Instruction> {
+        let mut res = Vec::<Instruction>::new();
         for code in instrs[r.0..r.1].into_iter() {
             // only accept instructions
             if let Code::Instruction(instr) = code {
                 // hash the expression into expr_val
                 // also obtain the destination name dest_n
-                let (expr_val, dest_n) = match instr {
+                let (expr_val, mut dest_n) = match instr {
                     Instruction::Constant { dest, value, .. } => {
                         (Rval::from(value.clone()), Some(dest.clone()))
                     }
@@ -109,10 +109,33 @@ impl LVNTable {
                     }
                     _ => (Rval::NoVal, None),
                 };
+                /*
+                let table_entry = self.exprs.get(expr_val);
+                let dest_overwritten = false;
 
-                self.exprs.entry(expr_val);
+                let dest_map = match table_entry {
+                    Some(idx) => {
+                        // idx is the entry number
+                        // somehow replace the instruction
+                    }
+                    None => {
+                        let num = self.entries.len(); // new value number
+                        if dest_overwritten {
+                            dest_n = "new";
+                            // set new instructions dest to this new thing
+                        }
+                        self.exprs.insert(expr_val, num);
+                        self.entries.insert(); // dest
+                        num
+                    }
+                };
                 // TODO: handle dest_n
+                if let Some(dest) = dest_n {
+                    self.remaps.insert(dest, dest_map);
+                }
+                */
             }
         }
+        res
     }
 }
