@@ -7,6 +7,7 @@ use std::{fs::File, io::BufReader};
 mod lvn;
 mod mrange;
 mod resolver;
+mod dce;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -62,6 +63,8 @@ fn main() {
     d.form_blocks(&v);
     //d.print_blocks(&v);
     d.print_blocks_compliance(&v);
+
+    
 
     let c = d.form_cfg(&v);
     d.print_cfg(&v, &c);
