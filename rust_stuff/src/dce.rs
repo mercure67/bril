@@ -16,7 +16,7 @@ fn function_dce(instrs: &Vec<Code>, blocks: &Vec<(usize, usize)>) -> Vec<Code> {
                 Code::Instruction(Instruction::Constant { dest, .. })
                 | Code::Instruction(Instruction::Value { dest, .. }) => dest,
                 _ => {
-                    break;
+                    continue;
                 }
             };
             let mut status = InstrStatus::Unused;
