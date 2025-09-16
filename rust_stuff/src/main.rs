@@ -60,7 +60,8 @@ fn main() {
     let mut d = resolver::GlobalData::default();
     d.initial_fill(&v);
     d.form_blocks(&v);
-    d.print_blocks(&v);
+    //d.print_blocks(&v);
+    d.print_blocks_compliance(&v);
 
     let c = d.form_cfg(&v);
     d.print_cfg(&v, &c);

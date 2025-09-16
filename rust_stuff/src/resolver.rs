@@ -3,8 +3,8 @@ use bril_rs::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-type CodeRange = (usize, usize);
-type Blockno = usize;
+pub type CodeRange = (usize, usize);
+pub type Blockno = usize;
 
 #[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
 pub struct CFGPos {
@@ -168,10 +168,26 @@ impl GlobalData {
             println!("");
         }
     }
+    pub fn print_blocks_compliance(&mut self, p: &bril_rs::Program) {
+        // print the basic blocks just like the basic blocks Python script would
 
-    // TODO: need to have some means of adding function scope
-    // number beyond last block indicates return to end of main
-    // TODO: implement CFG
+        let func = &p.functions[0];
+        let data = self.data_map.get(&func.name).unwrap();
+        for block in data.blocks.iter() {
+            for i in block.0..block.1 {
+                let curr_instr: &Code = &func.instrs[i];
+                if i == block.0 {
+                    if let Code::Label { label, .. } = curr_instr {
+                        println!("block {}:", label);
+                        continue;
+                    } else {
+                        println!("anonymous block")
+                    }
+                }
+                println!("{}", curr_instr);
+            }
+        }
+    }
 
     pub fn form_cfg(&mut self, p: &bril_rs::Program) -> CFG {
         let mut res = CFG::new();

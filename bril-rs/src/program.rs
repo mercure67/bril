@@ -733,6 +733,9 @@ impl FromStr for Type {
 }
 
 /// A JSON number/value
+///
+///
+
 #[cfg_attr(not(feature = "float"), derive(Eq, Hash))]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(untagged)]
