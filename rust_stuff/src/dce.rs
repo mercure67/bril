@@ -21,7 +21,7 @@ fn function_dce(instrs: &Vec<Code>, blocks: &Vec<(usize, usize)>) -> Vec<Code> {
             };
             let mut status = InstrStatus::Unused;
             let mut lrw = 0;
-            for j in i + 1..new_instrs.len() {
+            for j in 0..new_instrs.len() {
                 match new_instrs.get(j) {
                     Some(Code::Instruction(Instruction::Value { args, .. }))
                     | Some(Code::Instruction(Instruction::Effect { args, .. }))
@@ -30,8 +30,12 @@ fn function_dce(instrs: &Vec<Code>, blocks: &Vec<(usize, usize)>) -> Vec<Code> {
                         status = InstrStatus::Used;
                         break;
                     }
+                    _ => {}
+                }
+            }
+            for j in i + 1..new_instrs.len() {
+                match new_instrs.get(j) {
                     Some(Code::Instruction(Instruction::Constant { dest, .. }))
-                    | Some(Code::Instruction(Instruction::Value { dest, .. }))
                         if dest == destination =>
                     {
                         status = InstrStatus::Rewritten;
