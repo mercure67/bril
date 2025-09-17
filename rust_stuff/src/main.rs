@@ -47,7 +47,7 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    let v: bril_rs::Program = if args.mode == OpMode::Pipe {
+    let mut v: bril_rs::Program = if args.mode == OpMode::Pipe {
         load_program()
     } else {
         let filename = args
@@ -79,10 +79,17 @@ fn main() {
 
     match args.task {
         Task::DCE => println!("{}", dce::global_dce(&v, &d)),
-        Task::LVN => (),
+        Task::LVN => {
+            let mut lvn = lvn::LVNTable::default();
+            lvn.global_lvn(&mut v, &d);
+            d = resolver::GlobalData::default();
+            d.initial_fill(&v);
+            d.form_blocks(&v);
+            println!("{}", dce::global_dce(&v, &d));
+        }
     };
 
-    let c = d.form_cfg(&v);
+    //let c = d.form_cfg(&v);
     // d.print_cfg(&v, &c);
     //println!("{:?}", blocks);
     //println!("{:?}", v.functions);

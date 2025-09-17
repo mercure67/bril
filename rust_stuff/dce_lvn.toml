@@ -14,3 +14,11 @@ pipeline = [
     "brilirs -p {args}",
 ]
 
+
+[runs.lvn]
+pipeline = [
+    "bril2json",
+    "target/debug/rust_stuff --mode pipe lvn",
+    "brilirs -p {args}",
+]
+
