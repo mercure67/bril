@@ -5,13 +5,13 @@ use std::{collections::HashMap, num::Saturating};
 
 // assume that there are not enough args for Vec sorting to take a long time
 
-#[derive(Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Debug, Clone)]
 pub enum ValueArg {
     Remapped(usize),
     Arg(String),
 }
 
-#[derive(Hash, Eq, PartialEq)]
+#[derive(Hash, Eq, PartialEq, Clone)]
 pub enum Rval {
     Const {
         const_type: bril_rs::Type,
@@ -91,7 +91,14 @@ impl LVNTable {
             .name
             .clone()
     }
-    pub fn instr_to_rval(&self, instr: &Instruction) -> Option<Rval> {
+    pub fn reset(&mut self) {
+        self.remaps = HashMap::<String, usize>::new();
+        self.exprs = HashMap::<Rval, usize>::new();
+        self.entries = Vec::<LVNEntry>::new();
+        self.args = Vec::<String>::new();
+    }
+
+    pub fn instr_to_rval(&mut self, instr: &Instruction) -> Option<Rval> {
         match instr {
             Instruction::Constant {
                 dest,
@@ -112,12 +119,31 @@ impl LVNTable {
                     .map(|a| {
                         if self.args.contains(a) {
                             ValueArg::Arg(a.clone())
-                        } else {
+                        } else if self.remaps.contains_key(a) {
                             ValueArg::Remapped(*self.remaps.get(a).unwrap())
+                        } else {
+                            // add to args: hacky but works
+                            self.args.push(a.clone());
+                            ValueArg::Arg(a.clone())
                         }
                     })
                     .collect();
                 mapped_args.sort();
+                if *op == ValueOps::Id {
+                    // if taking id of const, directly return the const
+                    for a in mapped_args.iter() {
+                        if let ValueArg::Remapped(idx) = a {
+                            for (k, v) in self.exprs.iter() {
+                                if v == idx {
+                                    if let Rval::Const { .. } = k {
+                                        let res = k.clone();
+                                        return Some(res);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
                 Some(Rval::Value(op.clone(), mapped_args, funcs.clone()))
             } // TODO: consumer?
@@ -222,6 +248,8 @@ impl LVNTable {
                 let args = f.args.iter().map(|x| x.name.clone()).collect();
                 let new_instrs = self.populate(block, &f.instrs, args);
                 full_instrs.extend(new_instrs);
+                self.reset();
+                //println!("new block");
             }
             f.instrs = full_instrs;
         }
