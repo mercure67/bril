@@ -24,7 +24,7 @@ turnt tests/*/*.bril
 ```
 
 More importantly, we use Brench to test the optimizations against all the benchmarks of the form
-`../benchmarks/*/*.bril`, and plot the results using a Python script (dependent on Pandas and Matplotlib).
+`../benchmarks/core/*.bril`, and plot the results using a Python script (dependent on Pandas and Matplotlib).
 This can be recreated by building with `cargo build`, then running Brench with:
 
 ```sh
