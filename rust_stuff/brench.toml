@@ -1,5 +1,6 @@
 extract = 'total_dyn_inst: (\d+)'
 benchmarks = '../benchmarks/*/*.bril'
+timeout = 20
 
 [runs.baseline]
 pipeline = [
@@ -10,7 +11,7 @@ pipeline = [
 [runs.lvn]
 pipeline = [
     "bril2json",
-    "target/debug/rust_stuff --mode pipe - dce",
+    "target/debug/rust_stuff --mode pipe - lvn",
     "bril2json",
     "brili -p {args}",
 ]
