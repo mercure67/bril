@@ -11,6 +11,7 @@ pipeline = [
 pipeline = [
     "bril2json",
     "target/debug/rust_stuff --mode pipe dce",
+    "bril2json",
     "brilirs -p {args}",
 ]
 
@@ -19,6 +20,7 @@ pipeline = [
 pipeline = [
     "bril2json",
     "target/debug/rust_stuff --mode pipe lvn",
+    "bril2json",
     "brilirs -p {args}",
 ]
 

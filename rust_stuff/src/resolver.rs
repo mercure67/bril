@@ -22,7 +22,7 @@ impl std::fmt::Display for CFGPos {
 #[derive(Default)]
 pub struct FunctionData {
     pub funcno: usize,
-    pub callers: HashSet<CFGPos>,      // function plus blockno of callers
+    pub callers: HashSet<CFGPos>, // function plus blockno of callers
     pub calls: HashMap<usize, String>, // map of line to function it calls
     pub blocks: Vec<CodeRange>,
     pub labels: HashMap<String, Blockno>,
@@ -43,52 +43,43 @@ impl FunctionData {
                 Code::Instruction(i) => {
                     block_range.1 = block_range.1 + 1;
 
-                    match i {
+                    let should_add_block = match i {
                         Instruction::Value { op, funcs, .. } => {
                             if let ValueOps::Call = op {
-                                self.blocks.push(block_range);
-
                                 // handle calls
                                 let func_called = funcs.first().unwrap();
                                 calls.insert((func_called.clone(), num_blocks));
                                 self.calls.insert(ino, func_called.clone());
-
-                                num_blocks = num_blocks + 1;
-                                block_range = (block_range.1, block_range.1);
+                                true
+                            } else {
+                                false
                             }
                         }
                         Instruction::Effect { op, funcs, .. } => match op {
                             EffectOps::Return => {
-                                self.blocks.push(block_range);
-
                                 // handle return
                                 self.returns.push(ino);
-
-                                num_blocks = num_blocks + 1;
-                                block_range = (block_range.1, block_range.1);
+                                true
                             }
-                            EffectOps::Jump | EffectOps::Branch => {
-                                self.blocks.push(block_range);
-                                num_blocks = num_blocks + 1;
-
-                                block_range = (block_range.1, block_range.1);
-                            }
+                            EffectOps::Jump | EffectOps::Branch => true,
                             EffectOps::Call => {
-                                self.blocks.push(block_range);
-
                                 // handle calls
                                 let func_called = funcs.first().unwrap();
                                 calls.insert((func_called.clone(), num_blocks));
 
                                 self.calls.insert(ino, func_called.clone());
-                                num_blocks = num_blocks + 1;
-
-                                block_range = (block_range.1, block_range.1);
+                                true
                             }
-                            _ => (),
+                            _ => false,
                         },
-                        _ => (),
+                        _ => false,
                     };
+                    if should_add_block {
+                        self.blocks.push(block_range);
+                        num_blocks = num_blocks + 1;
+
+                        block_range = (block_range.1, block_range.1);
+                    }
                 }
                 Code::Label { label, pos: _ } => {
                     if !self.labels.contains_key(label) {
@@ -119,6 +110,10 @@ pub struct GlobalData {
 type CFG = HashMap<CFGPos, HashSet<CFGPos>>;
 
 impl GlobalData {
+    pub fn get_func_data(&self, name: &String) -> Option<&FunctionData> {
+        self.data_map.get(name)
+    }
+
     pub fn initial_fill(&mut self, p: &bril_rs::Program) {
         // does not yet handle imports!
         //
@@ -172,7 +167,7 @@ impl GlobalData {
         // print the basic blocks just like the basic blocks Python script would
 
         let func = &p.functions[0];
-        let data = self.data_map.get(&func.name).unwrap();
+        let data = self.get_func_data(&func.name).unwrap();
         for block in data.blocks.iter() {
             for i in block.0..block.1 {
                 let curr_instr: &Code = &func.instrs[i];
@@ -193,10 +188,12 @@ impl GlobalData {
         let mut res = CFG::new();
 
         for func in p.functions.iter() {
-            let data = self.data_map.get(&func.name).unwrap();
+            let data = self.get_func_data(&func.name).unwrap();
             for (blockno, block) in data.blocks.iter().enumerate() {
                 let mut block_res = HashSet::<CFGPos>::new();
                 let terminator = func.instrs.get(block.1 - 1).unwrap();
+
+                // TODO: move block_res extension out
                 if let Code::Instruction(instr) = terminator {
                     match instr {
                         Instruction::Effect {
@@ -216,7 +213,7 @@ impl GlobalData {
                                 let mut ext: Vec<CFGPos> = funcs
                                     .iter()
                                     .map(|x| CFGPos {
-                                        funcno: self.data_map.get(x).unwrap().funcno,
+                                        funcno: self.get_func_data(x).unwrap().funcno,
                                         blockno: 0,
                                     })
                                     .collect();
@@ -240,7 +237,7 @@ impl GlobalData {
                                 let mut ext: Vec<CFGPos> = funcs
                                     .iter()
                                     .map(|x| CFGPos {
-                                        funcno: self.data_map.get(x).unwrap().funcno,
+                                        funcno: self.get_func_data(x).unwrap().funcno,
                                         blockno: 0,
                                     })
                                     .collect();
@@ -287,5 +284,3 @@ impl GlobalData {
 
     // number beyond last block indicates return to end of main
 }
-
-// TODO: a modified codeblock struct which allows insertion of deleted lines, and can be iterated over such that deleted lines don't show up

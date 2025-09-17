@@ -1,0 +1,249 @@
+diff --git a/rust_stuff/src/lvn.rs b/rust_stuff/src/lvn.rs
+index 68138ed..af63795 100644
+--- a/rust_stuff/src/lvn.rs
++++ b/rust_stuff/src/lvn.rs
+@@ -68,6 +68,7 @@ impl TryInto<bril_rs::Literal> for Rval {
+ //TODO: handle the rename case
+ // TODO: separate lval?
+ 
++#[derive(Debug)]
+ pub struct LVNEntry {
+     name: String,
+ }
+@@ -80,11 +81,36 @@ pub struct LVNTable {
+     args: Vec<String>,
+ }
+ 
++pub fn is_overwritten(dest_i: &String, instrs: &Vec<Code>, offset: usize) -> bool {
++    for code in instrs[offset..].into_iter() {
++        if let Code::Instruction(instr) = code {
++            match instr {
++                Instruction::Constant {
++                    dest,
++                    const_type: t,
++                    ..
++                }
++                | Instruction::Value {
++                    dest, op_type: t, ..
++                } => {
++                    if dest == dest_i {
++                        return true;
++                    }
++                }
++                _ => (),
++            }
++        }
++    }
++    return false;
++}
++
+ impl LVNTable {
+     pub fn get_remapped_arg(&self, argname: &String) -> String {
++        println!("{:?}", self.entries);
+         if self.args.contains(argname) {
+             return argname.clone();
+         }
++
+         self.entries
+             .get(*self.remaps.get(argname).unwrap())
+             .unwrap()
+@@ -92,12 +118,60 @@ impl LVNTable {
+             .clone()
+     }
+     pub fn reset(&mut self) {
++        println!("reset");
+         self.remaps = HashMap::<String, usize>::new();
+         self.exprs = HashMap::<Rval, usize>::new();
+         self.entries = Vec::<LVNEntry>::new();
+         self.args = Vec::<String>::new();
+     }
+ 
++    pub fn is_arg_const(&self, argno: &usize) -> Option<Rval> {
++        for (k, v) in self.exprs.iter() {
++            if v == argno {
++                if let Rval::Const { .. } = k {
++                    return Some(k.clone());
++                }
++            }
++        }
++        return None;
++    }
++
++    /*
++        pub fn eval_op(op: ValueOps, a: Vec<usize>) {
++            // presume working on remapped
++            match op {
++                Add => (),
++
++                Sub => (),
++
++                Mul => (),
++
++                Div => (),
++
++                Eq => (),
++
++                Lt => (),
++
++                Gt => (),
++
++                Le => (),
++
++                Ge => (),
++
++                Not => (),
++
++                And => (),
++
++                Or => (),
++
++                Call => (),
++
++                Id => (),
++                _ => (),
++            }
++
++    }*/
++
+     pub fn instr_to_rval(&mut self, instr: &Instruction) -> Option<Rval> {
+         match instr {
+             Instruction::Constant {
+@@ -117,13 +191,13 @@ impl LVNTable {
+                 let mut mapped_args: Vec<ValueArg> = args
+                     .iter()
+                     .map(|a| {
+-                        if self.args.contains(a) {
+-                            ValueArg::Arg(a.clone())
+-                        } else if self.remaps.contains_key(a) {
++                        if self.remaps.contains_key(a) {
+                             ValueArg::Remapped(*self.remaps.get(a).unwrap())
+                         } else {
+-                            // add to args: hacky but works
+-                            self.args.push(a.clone());
++                            self.remaps.insert(a.clone(), self.entries.len());
++
++                            self.entries.push(LVNEntry { name: a.clone() });
++
+                             ValueArg::Arg(a.clone())
+                         }
+                     })
+@@ -133,17 +207,29 @@ impl LVNTable {
+                     // if taking id of const, directly return the const
+                     for a in mapped_args.iter() {
+                         if let ValueArg::Remapped(idx) = a {
+-                            for (k, v) in self.exprs.iter() {
+-                                if v == idx {
+-                                    if let Rval::Const { .. } = k {
+-                                        let res = k.clone();
+-                                        return Some(res);
+-                                    }
+-                                }
++                            //println!("{:?}", self.remaps);
++                            let res = self.is_arg_const(idx);
++                            if let Some(..) = res {
++                                return res;
+                             }
+                         }
+                     }
+                 }
++                let all_const = mapped_args.iter().fold(true, |i, s| {
++                    if let ValueArg::Remapped(idx) = s {
++                        if let Some(..) = self.is_arg_const(idx) {
++                            return i & true;
++                        } else {
++                            return false;
++                        }
++                    }
++                    false
++                });
++                /*
++                if all_const {
++                    match *op {}
++                }
++                */
+ 
+                 Some(Rval::Value(op.clone(), mapped_args, funcs.clone()))
+             } // TODO: consumer?
+@@ -154,10 +240,11 @@ impl LVNTable {
+     pub fn populate(&mut self, r: &CodeRange, instrs: &Vec<Code>, args: Vec<String>) -> Vec<Code> {
+         self.args = args;
+         let mut res = Vec::<Code>::new();
++        let mut offset = r.0;
+         for code in instrs[r.0..r.1].into_iter() {
+             // only accept instructions
+             if let Code::Instruction(instr) = code {
+-                //println!("{}", instr);
++                println!("{}", instr);
+                 match instr {
+                     Instruction::Constant {
+                         dest,
+@@ -169,7 +256,7 @@ impl LVNTable {
+                     } => {
+                         let curr_expr = self.instr_to_rval(instr).unwrap();
+                         let table_entry = self.exprs.get(&curr_expr);
+-                        let dest_overwritten = false;
++                        let dest_overwritten = is_overwritten(dest, instrs, offset + 1);
+ 
+                         let mut inst_dest = dest.clone();
+ 
+@@ -179,8 +266,10 @@ impl LVNTable {
+                             // somehow replace the instruction
+ 
+                             // anything using this as an arg should instead refer to what's been calculated
++                            //println!("e: {}", self.entries[*i].name);
+                             let new_instr = Instruction::Value {
+                                 args: Vec::from([self.entries[*i].name.clone()]),
++
+                                 dest: inst_dest.clone(),
+                                 funcs: Vec::new(),
+                                 labels: Vec::new(),
+@@ -188,15 +277,24 @@ impl LVNTable {
+                                 pos: None, // TODO: handle
+                                 op_type: t.clone(),
+                             };
++                            println!("-> wrote back {}", new_instr);
++
+                             res.push(Code::Instruction(new_instr));
++
+                             *i
+                         } else {
+                             let num = self.entries.len(); // new value number
+                             let mut new_instr = instr.clone();
+                             if dest_overwritten {
++                                let old_dest = inst_dest.clone();
+                                 inst_dest = String::from("overwritten_") + &inst_dest;
++                                //println!("{}", inst_dest);
++                                self.remaps.insert(old_dest, num);
++
+                                 // set new instructions dest to this new thing
++                                // then, because yay, this needs to be updated in all the subsequent args
+                             }
++                            //println!("->{}", inst_dest);
+ 
+                             // https://stackoverflow.com/questions/54162832/is-there-a-way-to-create-a-copy-of-an-enum-with-some-field-values-updated
+ 
+@@ -214,6 +312,8 @@ impl LVNTable {
+                                 name: inst_dest.clone(),
+                             }); // dest
+ 
++                            println!("-> wrote back {}", new_instr);
++
+                             res.push(Code::Instruction(new_instr));
+ 
+                             num
+@@ -224,6 +324,7 @@ impl LVNTable {
+                         // if there is some destination, map it to the correct entry
+ 
+                         self.remaps.insert(inst_dest, entry_num);
++                        println!("{:?}", self.remaps);
+                     }
+                     _ => {
+                         res.push(code.clone());
+@@ -237,6 +338,7 @@ impl LVNTable {
+                 // it's okay to put labels in unmodified
+                 res.push(code.clone());
+             }
++            offset = offset + 1;
+         }
+         res
+     }
