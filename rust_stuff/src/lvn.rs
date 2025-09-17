@@ -81,6 +81,13 @@ pub struct LVNTable {
 }
 
 impl LVNTable {
+    fn is_commutative(op: &bril_rs::ValueOps) -> bool {
+        match op {
+            ValueOps::Add | ValueOps::Mul | ValueOps::Eq | ValueOps::And | ValueOps::Or => true,
+            _ => false,
+        }
+    }
+
     pub fn get_remapped_arg(&self, argname: &String) -> String {
         if self.args.contains(argname) {
             return argname.clone();
@@ -128,7 +135,11 @@ impl LVNTable {
                         }
                     })
                     .collect();
-                mapped_args.sort();
+
+                if LVNTable::is_commutative(op) {
+                    mapped_args.sort();
+                }
+
                 if *op == ValueOps::Id {
                     // if taking id of const, directly return the const
                     for a in mapped_args.iter() {
@@ -168,10 +179,22 @@ impl LVNTable {
                         dest, op_type: t, ..
                     } => {
                         let curr_expr = self.instr_to_rval(instr).unwrap();
-                        let table_entry = self.exprs.get(&curr_expr);
                         let dest_overwritten = false;
 
                         let mut inst_dest = dest.clone();
+
+                        // remove exprs that refernece overwritten dest
+                        self.exprs.retain(|k, _| {
+                            if let Rval::Value(_, args, _) = k {
+                                !args.iter().any(|a| match a {
+                                    ValueArg::Arg(name) => name == &inst_dest,
+                                    ValueArg::Remapped(_) => false,
+                                })
+                            } else {
+                                true
+                            }
+                        });
+                        let table_entry = self.exprs.get(&curr_expr);
 
                         let entry_num = if let Some(i) = table_entry {
                             // the table entry already exists, it is i
