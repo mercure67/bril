@@ -4,6 +4,7 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::{fs::File, io::BufReader};
 
+mod data_flow;
 mod dce;
 mod lvn;
 mod resolver;

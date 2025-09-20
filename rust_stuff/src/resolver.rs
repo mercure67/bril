@@ -94,8 +94,6 @@ pub struct GlobalData {
     pub data_map: HashMap<String, FunctionData>,
 }
 
-type CFG = HashMap<CFGPos, HashSet<CFGPos>>;
-
 impl GlobalData {
     pub fn get_func_data(&self, name: &String) -> Option<&FunctionData> {
         self.data_map.get(name)
@@ -169,6 +167,12 @@ impl GlobalData {
                 println!("{}", curr_instr);
             }
         }
+    }
+
+    pub fn get_codeslice<'a>(&'a self, p: &'a bril_rs::Program, pos: &CFGPos) -> &'a [Code] {
+        let func = &p.functions[pos.funcno];
+        let cr = self.get_func_data(&func.name).unwrap().blocks[pos.blockno];
+        &func.instrs[cr.0..cr.1]
     }
 
     pub fn form_cfg(&mut self, p: &bril_rs::Program) -> CFG {
@@ -270,4 +274,20 @@ impl GlobalData {
     }
 
     // number beyond last block indicates return to end of main
+
+    pub fn all_blocks(&self) -> Vec<CFGPos> {
+        let mut res = Vec::<CFGPos>::new();
+
+        let mut funcno = 0;
+        for (_, v) in self.data_map.iter() {
+            for (blockno, _) in v.blocks.iter().enumerate() {
+                res.push(CFGPos {
+                    funcno: funcno,
+                    blockno: blockno,
+                })
+            }
+            funcno = funcno + 1;
+        }
+        res
+    }
 }

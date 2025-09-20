@@ -1,5 +1,7 @@
 // utility classes and types
 
+use std::collections::{HashMap, HashSet};
+
 pub type CodeRange = (usize, usize);
 pub type Blockno = usize;
 
@@ -14,3 +16,5 @@ impl std::fmt::Display for CFGPos {
         f.write_fmt(format_args!("f{}.b{}", self.funcno, self.blockno))
     }
 }
+
+pub type CFG = HashMap<CFGPos, HashSet<CFGPos>>;
