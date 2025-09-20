@@ -1,22 +1,9 @@
 use bril_rs::*;
 
+use crate::util::*;
+
 use std::collections::HashMap;
 use std::collections::HashSet;
-
-pub type CodeRange = (usize, usize);
-pub type Blockno = usize;
-
-#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
-pub struct CFGPos {
-    funcno: usize,
-    blockno: Blockno,
-}
-
-impl std::fmt::Display for CFGPos {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("f{}.b{}", self.funcno, self.blockno))
-    }
-}
 
 // TODO: handle args
 #[derive(Default)]

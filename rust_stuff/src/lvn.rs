@@ -1,7 +1,8 @@
 use crate::resolver::*;
+use crate::util::*;
 use bril_rs::*;
 
-use std::{collections::HashMap, num::Saturating};
+use std::collections::HashMap;
 
 // assume that there are not enough args for Vec sorting to take a long time
 
@@ -68,6 +69,9 @@ impl TryInto<bril_rs::Literal> for Rval {
 //TODO: handle the rename case
 // TODO: separate lval?
 
+// TODO: these structs can most likely be refactored
+// ex: separate list of consts in order to simplify const folding?
+// also, probably using some form of 'look ahead' to count variable uses and such would be helpful
 pub struct LVNEntry {
     name: String,
 }
@@ -108,14 +112,10 @@ impl LVNTable {
     pub fn instr_to_rval(&mut self, instr: &Instruction) -> Option<Rval> {
         match instr {
             Instruction::Constant {
-                dest,
-                value,
-                const_type,
-                ..
+                value, const_type, ..
             } => Some(Rval::from(value.clone())),
             Instruction::Value {
                 args,
-                dest,
                 funcs,
                 op,
                 op_type,
