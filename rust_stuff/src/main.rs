@@ -4,10 +4,11 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::{fs::File, io::BufReader};
 
+mod data_flow;
 mod dce;
 mod lvn;
-mod mrange;
 mod resolver;
+mod util;
 
 #[derive(Subcommand)]
 enum Task {
@@ -15,20 +16,11 @@ enum Task {
     LVN,
 }
 
-#[derive(ValueEnum, Copy, Clone, Debug, PartialEq, Eq)]
-enum OpMode {
-    Pipe,
-    File,
-}
-
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 struct Args {
     #[command(subcommand)]
     task: Task,
-
-    #[arg(value_enum, long, default_value_t = OpMode::File, required = true)]
-    mode: OpMode,
 
     #[arg(value_hint = clap::ValueHint::FilePath)]
     filename: Option<std::path::PathBuf>,
@@ -47,13 +39,9 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    let mut v: bril_rs::Program = if args.mode == OpMode::Pipe {
-        load_program()
-    } else {
-        let filename = args
-            .filename
-            .expect("bad file! this shouldn't normally happen");
+    // https://stackoverflow.com/questions/71885543/accept-optional-file-on-command-line-default-to-stdin
 
+    let mut prog: bril_rs::Program = if let Some(filename) = args.filename {
         let file = match File::open(filename.as_path()) {
             Err(why) => {
                 eprintln!("couldn't open file: {}", why);
@@ -68,24 +56,33 @@ fn main() {
             Err(why) => panic!("{}", why),
             Ok(v) => v,
         }
+    } else {
+        load_program()
     };
 
     // extract functions
-    let mut d = resolver::GlobalData::default();
-    d.initial_fill(&v);
-    d.form_blocks(&v);
+    let mut d = resolver::GlobalData {
+        data_map: HashMap::<String, resolver::FunctionData>::new(),
+        program: &mut prog,
+    };
+    d.initial_fill();
+    d.form_blocks();
     //d.print_blocks(&v);
     // d.print_blocks_compliance(&v);
 
     match args.task {
-        Task::DCE => println!("{}", dce::global_dce(&v, &d)),
+        Task::DCE => println!("{}", dce::global_dce(&d)),
         Task::LVN => {
             let mut lvn = lvn::LVNTable::default();
-            lvn.global_lvn(&mut v, &d);
-            d = resolver::GlobalData::default();
-            d.initial_fill(&v);
-            d.form_blocks(&v);
-            println!("{}", dce::global_dce(&v, &d));
+            lvn.global_lvn(&mut d);
+            d = resolver::GlobalData {
+                data_map: HashMap::<String, resolver::FunctionData>::new(),
+                program: &mut prog,
+            };
+
+            d.initial_fill();
+            d.form_blocks();
+            println!("{}", dce::global_dce(&d));
         }
     };
 

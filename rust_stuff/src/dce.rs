@@ -1,4 +1,5 @@
 use crate::resolver;
+use crate::util::*;
 use bril_rs::*;
 
 enum InstrStatus {
@@ -74,9 +75,9 @@ fn function_dce(instrs: &Vec<Code>, blocks: &Vec<(usize, usize)>) -> Vec<Code> {
     return new_instrs;
 }
 
-pub fn global_dce(p: &Program, d: &resolver::GlobalData) -> Program {
+pub fn global_dce(d: &resolver::GlobalData) -> Program {
     let mut funcs: Vec<Function> = Vec::new();
-    for f in p.functions.iter() {
+    for f in d.program.functions.iter() {
         let f_data = d.data_map.get(&f.name).unwrap();
         let new_instrs = function_dce(&f.instrs, &f_data.blocks);
         let new_f = Function {
@@ -90,6 +91,6 @@ pub fn global_dce(p: &Program, d: &resolver::GlobalData) -> Program {
     }
     return Program {
         functions: funcs,
-        imports: p.imports.clone(),
+        imports: d.program.imports.clone(),
     };
 }

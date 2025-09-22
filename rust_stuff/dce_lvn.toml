@@ -10,7 +10,7 @@ pipeline = [
 [runs.dce]
 pipeline = [
     "bril2json",
-    "target/debug/rust_stuff --mode pipe dce",
+    "target/debug/rust_stuff dce",
     "bril2json",
     "brilirs -p {args}",
 ]
@@ -19,7 +19,7 @@ pipeline = [
 [runs.lvn]
 pipeline = [
     "bril2json",
-    "target/debug/rust_stuff --mode pipe lvn",
+    "target/debug/rust_stuff lvn",
     "bril2json",
     "brilirs -p {args}",
 ]
