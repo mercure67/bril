@@ -24,7 +24,7 @@ pub fn predecessors(p: &CFGPos, cfg: &CFG) -> Option<HashSet<CFGPos>> {
 }*/
 
 pub struct WorklistConfig<'a> {
-    data: &'a mut GlobalData,
+    data: &'a mut GlobalData<'a>,
     p: &'a mut Program,
     transfer: fn(&[Code], &Vec<String>) -> Vec<String>, // the transfer function
     merge: fn(Vec<&Vec<String>>) -> Vec<String>,        // the merge function.
@@ -33,11 +33,11 @@ pub struct WorklistConfig<'a> {
 // TODO: best method for making merge, transfer overrideable? merge, transfer results in dynamic dispatch
 
 impl<'a> WorklistConfig<'a> {
-    fn worklist(&self, data: &mut GlobalData, p: &Program) {
+    fn worklist(&self, data: &mut GlobalData) {
         let mut in_set = HashMap::<CFGPos, Vec<String>>::new();
         let mut out_set = HashMap::<CFGPos, Vec<String>>::new();
 
-        let cfg = data.form_cfg(p);
+        let cfg = data.form_cfg();
         let mut wl = data.all_blocks();
         while !wl.is_empty() {
             let b = wl.first().unwrap().clone();
@@ -49,7 +49,7 @@ impl<'a> WorklistConfig<'a> {
                 .collect();
             in_set.insert(b, (self.merge)(m));
 
-            let new_out = (self.transfer)(data.get_codeslice(p, &b), in_set.get(&b).unwrap());
+            let new_out = (self.transfer)(data.get_codeslice(&b), in_set.get(&b).unwrap());
             let existing = out_set.get(&b);
             let mut is_diff = false;
             if let None = existing {

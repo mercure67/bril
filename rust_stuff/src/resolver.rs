@@ -89,9 +89,9 @@ impl FunctionData {
     }
 }
 
-#[derive(Default)]
-pub struct GlobalData {
+pub struct GlobalData<'a> {
     pub data_map: HashMap<String, FunctionData>,
+    pub program: &'a mut Program,
 }
 
 impl GlobalData {
@@ -99,11 +99,10 @@ impl GlobalData {
         self.data_map.get(name)
     }
 
-    pub fn initial_fill(&mut self, p: &bril_rs::Program) {
+    pub fn initial_fill(&mut self) {
         // does not yet handle imports!
-        //
         // populate GlobalData: create a new data set for each function name
-        for (fno, f) in p.functions.iter().enumerate() {
+        for (fno, f) in self.program.functions.iter().enumerate() {
             if self.data_map.contains_key(&f.name) {
                 panic!("function is defined twice");
             }
@@ -112,16 +111,15 @@ impl GlobalData {
             self.data_map.insert(f.name.clone(), data);
         }
     }
-    pub fn form_blocks(&mut self, p: &bril_rs::Program) {
-        for f in p.functions.iter() {
+    pub fn form_blocks(&mut self) {
+        for f in self.program.functions.iter() {
             let fdata = self.data_map.get_mut(&f.name).unwrap();
             let calls = fdata.populate(f);
-            let fno = fdata.funcno;
 
             for c in calls {
                 self.data_map.entry(c.0).and_modify(|x| {
                     x.callers.insert(CFGPos {
-                        funcno: fno,
+                        funcno: fdata.funcno,
                         blockno: c.1,
                     });
                 });
@@ -129,8 +127,8 @@ impl GlobalData {
         }
     }
 
-    pub fn print_blocks(&mut self, p: &bril_rs::Program) {
-        for f in p.functions.iter() {
+    pub fn print_blocks(&mut self) {
+        for f in self.program.functions.iter() {
             println!("function name: {}", f.name);
             let data = self.data_map.get(&f.name).unwrap();
             let mut lineno = 0;
@@ -148,10 +146,10 @@ impl GlobalData {
             println!("");
         }
     }
-    pub fn print_blocks_compliance(&mut self, p: &bril_rs::Program) {
+    pub fn print_blocks_compliance(&mut self) {
         // print the basic blocks just like the basic blocks Python script would
 
-        let func = &p.functions[0];
+        let func = &self.program.functions[0];
         let data = self.get_func_data(&func.name).unwrap();
         for block in data.blocks.iter() {
             for i in block.0..block.1 {
@@ -169,16 +167,16 @@ impl GlobalData {
         }
     }
 
-    pub fn get_codeslice<'a>(&'a self, p: &'a bril_rs::Program, pos: &CFGPos) -> &'a [Code] {
-        let func = &p.functions[pos.funcno];
+    pub fn get_codeslice<'a>(&'a self, pos: &CFGPos) -> &'a [Code] {
+        let func = &self.program.functions[pos.funcno];
         let cr = self.get_func_data(&func.name).unwrap().blocks[pos.blockno];
         &func.instrs[cr.0..cr.1]
     }
 
-    pub fn form_cfg(&mut self, p: &bril_rs::Program) -> CFG {
+    pub fn form_cfg(&mut self) -> CFG {
         let mut res = CFG::new();
 
-        for func in p.functions.iter() {
+        for func in self.program.functions.iter() {
             let data = self.get_func_data(&func.name).unwrap();
             for (blockno, block) in data.blocks.iter().enumerate() {
                 let mut block_res = HashSet::<CFGPos>::new();
@@ -260,13 +258,13 @@ impl GlobalData {
         res
     }
 
-    pub fn print_cfg(&self, p: &bril_rs::Program, c: &CFG) {
+    pub fn print_cfg(&self, c: &CFG) {
         for (k, v) in c {
-            let curr_func = p.functions.get(k.funcno).unwrap();
+            let curr_func = self.program.functions.get(k.funcno).unwrap();
 
             print!("{}: block {} ->", curr_func.name, k.blockno);
             for pos in v {
-                let subname: &String = &p.functions.get(pos.funcno).unwrap().name;
+                let subname: &String = &self.program.functions.get(pos.funcno).unwrap().name;
                 print!(" {}.b{}", subname, pos.blockno);
             }
             println!("");

@@ -4,10 +4,10 @@ This is a tool that optimizes Bril programs using dead code elimination and loca
 
 ```sh
 # Run in file mode
-target/debug/rust_stuff --mode file <path/to/program>.json {dce,lvn}
+target/debug/rust_stuff <path/to/program>.json {dce,lvn}
 
 # Run in pipe mode from a '.bril' file
-bril2json < <path/to/program>.bril | target/debug/rust_stuff --mode pipe - {dce,lvn}
+bril2json < <path/to/program>.bril | target/debug/rust_stuff - {dce,lvn}
 ```
 
 ## Implemented modes

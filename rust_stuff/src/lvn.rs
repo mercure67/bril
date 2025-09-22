@@ -263,8 +263,8 @@ impl LVNTable {
         }
         res
     }
-    pub fn global_lvn(&mut self, p: &mut Program, d: &GlobalData) {
-        for f in p.functions.iter_mut() {
+    pub fn global_lvn(&mut self, d: &mut GlobalData) {
+        for f in d.program.functions.iter_mut() {
             let f_data = d.data_map.get(&f.name).unwrap();
             let mut full_instrs = Vec::<Code>::new();
             for block in f_data.blocks.iter() {
