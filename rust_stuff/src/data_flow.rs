@@ -43,8 +43,8 @@ where
         while !wl.is_empty() {
             //for _i in 0..10 {
             let b = wl.pop().unwrap();
-            //let b = wl.first().unwrap().clone();
             let pred = predecessors(&b, &cfg).unwrap();
+
             let m: Vec<&Vec<T>> = self
                 .output_set
                 .iter()
@@ -59,17 +59,23 @@ where
             if let None = existing {
                 is_diff = true;
             } else if let Some(e) = existing {
-                println!("{:?} {:?}", new_out, e);
-                for i in new_out.iter() {
-                    if !e.contains(i) {
-                        is_diff = true;
-                    }
-                }
+                is_diff = *e != *new_out;
             }
             if is_diff {
                 wl.extend(successors(&b, &cfg).unwrap().iter());
             }
+
             self.output_set.insert(b, new_out);
+        }
+    }
+
+    pub fn print(&self) {
+        let blocks = self.data.all_blocks();
+
+        for block in blocks {
+            println!("block: {}", block);
+            println!("in: {:?}", self.input_set.get(&block).unwrap());
+            println!("out: {:?}", self.output_set.get(&block).unwrap());
         }
     }
 }

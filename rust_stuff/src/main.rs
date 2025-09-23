@@ -4,9 +4,11 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::{fs::File, io::BufReader};
 
+use crate::constprop::ConstProp;
 use crate::reaching_defns::Defn;
 use crate::util::CFGPos;
 
+mod constprop;
 mod data_flow;
 mod dce;
 mod lvn;
@@ -100,7 +102,18 @@ fn main() {
             println!("{:?}", w.input_set);
             println!("{:?}", w.output_set);
         }
-        Task::DFConst => (),
+        Task::DFConst => {
+            d.print_blocks();
+            let c = d.form_cfg();
+            d.print_cfg(&c);
+            let mut w = data_flow::WorklistConfig::<ConstProp> {
+                input_set: HashMap::<CFGPos, Vec<ConstProp>>::new(),
+                output_set: HashMap::<CFGPos, Vec<ConstProp>>::new(),
+                data: &mut d,
+            };
+            w.worklist();
+            w.print();
+        }
     };
 
     //let c = d.form_cfg(&v);

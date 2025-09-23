@@ -220,7 +220,14 @@ impl<'a> GlobalData<'a> {
                                 block_res.extend(data.callers.iter());
                             }
 
-                            _ => (),
+                            _ => {
+                                if blockno < data.blocks.len() - 1 {
+                                    block_res.insert(CFGPos {
+                                        funcno: data.funcno,
+                                        blockno: blockno + 1,
+                                    });
+                                }
+                            }
                         },
                         Instruction::Value { funcs, op, .. } => {
                             if let ValueOps::Call = op {
@@ -239,9 +246,23 @@ impl<'a> GlobalData<'a> {
                                 }
 
                                 block_res.extend(ext);
+                            } else {
+                                if blockno < data.blocks.len() - 1 {
+                                    block_res.insert(CFGPos {
+                                        funcno: data.funcno,
+                                        blockno: blockno + 1,
+                                    });
+                                }
                             }
                         }
-                        _ => (),
+                        _ => {
+                            if blockno < data.blocks.len() - 1 {
+                                block_res.insert(CFGPos {
+                                    funcno: data.funcno,
+                                    blockno: blockno + 1,
+                                });
+                            }
+                        }
                     }
                 }
                 let k = CFGPos {
