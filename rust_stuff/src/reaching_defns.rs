@@ -11,14 +11,14 @@ fn fresh(var: &str) -> String {
     format!("{}{}", var, id)
 }
 
-#[derive(PartialEq, Eq, Hash, Clone)]
-struct Defn {
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+pub struct Defn {
     name: String,
     var: String,
 }
 
 impl DFDomainElement for Defn {
-    fn merge(input_sets: &[Vec<Self>]) -> Vec<Self> {
+    fn merge(input_sets: &Vec<&Vec<Self>>) -> Vec<Self> {
         let mut set = HashSet::new();
         for v in input_sets {
             set.extend(v.iter().cloned());
@@ -26,7 +26,7 @@ impl DFDomainElement for Defn {
         set.into_iter().collect()
     }
 
-    fn transfer(input_set: &[Self], code: &[Code]) -> Vec<Self> {
+    fn transfer(input_set: &Vec<Self>, code: &[Code]) -> Vec<Self> {
         let mut set: HashSet<Self> = input_set.iter().cloned().collect();
         for line in code {
             match line {

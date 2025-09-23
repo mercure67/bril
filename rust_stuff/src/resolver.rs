@@ -94,11 +94,11 @@ pub struct GlobalData<'a> {
     pub program: &'a mut Program,
 }
 
-impl GlobalData {
+impl<'a> GlobalData<'a> {
     pub fn get_func_data(&self, name: &String) -> Option<&FunctionData> {
         self.data_map.get(name)
     }
-    
+
     pub fn initial_fill(&mut self) {
         // does not yet handle imports!
         // populate GlobalData: create a new data set for each function name
@@ -115,11 +115,12 @@ impl GlobalData {
         for f in self.program.functions.iter() {
             let fdata = self.data_map.get_mut(&f.name).unwrap();
             let calls = fdata.populate(f);
+            let fno = fdata.funcno;
 
             for c in calls {
                 self.data_map.entry(c.0).and_modify(|x| {
                     x.callers.insert(CFGPos {
-                        funcno: fdata.funcno,
+                        funcno: fno,
                         blockno: c.1,
                     });
                 });
@@ -167,7 +168,7 @@ impl GlobalData {
         }
     }
 
-    pub fn get_codeslice<'a>(&'a self, pos: &CFGPos) -> &'a [Code] {
+    pub fn get_codeslice(&'a self, pos: &CFGPos) -> &'a [Code] {
         let func = &self.program.functions[pos.funcno];
         let cr = self.get_func_data(&func.name).unwrap().blocks[pos.blockno];
         &func.instrs[cr.0..cr.1]
@@ -206,7 +207,7 @@ impl GlobalData {
                                         blockno: 0,
                                     })
                                     .collect();
-                                if block != data.blocks.last().unwrap() {
+                                if blockno < data.blocks.len() - 1 {
                                     ext.push(CFGPos {
                                         funcno: data.funcno,
                                         blockno: blockno + 1,
@@ -230,7 +231,7 @@ impl GlobalData {
                                         blockno: 0,
                                     })
                                     .collect();
-                                if block != data.blocks.last().unwrap() {
+                                if blockno < data.blocks.len() - 1 {
                                     ext.push(CFGPos {
                                         funcno: data.funcno,
                                         blockno: blockno + 1,
@@ -280,7 +281,7 @@ impl GlobalData {
         for (_, v) in self.data_map.iter() {
             for (blockno, _) in v.blocks.iter().enumerate() {
                 res.push(CFGPos {
-                    funcno: funcno,
+                    funcno: v.funcno,
                     blockno: blockno,
                 })
             }

@@ -4,17 +4,22 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::{fs::File, io::BufReader};
 
+use crate::reaching_defns::Defn;
+use crate::util::CFGPos;
+
 mod data_flow;
 mod dce;
 mod lvn;
+mod reaching_defns;
 mod resolver;
 mod util;
-mod reaching_defns;
 
 #[derive(Subcommand)]
 enum Task {
     DCE, // dead code elimination
     LVN,
+    DFReaching,
+    DFConst,
 }
 
 #[derive(Parser)]
@@ -85,6 +90,17 @@ fn main() {
             d.form_blocks();
             println!("{}", dce::global_dce(&d));
         }
+        Task::DFReaching => {
+            let mut w = data_flow::WorklistConfig::<Defn> {
+                input_set: HashMap::<CFGPos, Vec<Defn>>::new(),
+                output_set: HashMap::<CFGPos, Vec<Defn>>::new(),
+                data: &mut d,
+            };
+            w.worklist();
+            println!("{:?}", w.input_set);
+            println!("{:?}", w.output_set);
+        }
+        Task::DFConst => (),
     };
 
     //let c = d.form_cfg(&v);
