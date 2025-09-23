@@ -98,7 +98,7 @@ impl GlobalData {
     pub fn get_func_data(&self, name: &String) -> Option<&FunctionData> {
         self.data_map.get(name)
     }
-
+    
     pub fn initial_fill(&mut self) {
         // does not yet handle imports!
         // populate GlobalData: create a new data set for each function name

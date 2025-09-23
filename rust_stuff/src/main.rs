@@ -9,6 +9,7 @@ mod dce;
 mod lvn;
 mod resolver;
 mod util;
+mod reaching_defns;
 
 #[derive(Subcommand)]
 enum Task {

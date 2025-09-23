@@ -19,38 +19,41 @@ pub fn predecessors(p: &CFGPos, cfg: &CFG) -> Option<HashSet<CFGPos>> {
 }
 
 //TODO: we might need a more sophisticated type for variables in the future, but ah well
-/*trait DF_Merge {
-    fn merge(Vec<)
-}*/
+pub(crate) trait DFDomainElement: Sized + PartialEq {
+    fn merge(input_sets: &[Vec<Self>]) -> Vec<Self>;
+    fn transfer(input_set: &[Self], code: &[Code]) -> Vec<Self>;
+}
 
-pub struct WorklistConfig<'a> {
+pub struct WorklistConfig<'a, T: DFDomainElement> {
+    input_set: HashMap<CFGPos, Vec<T>>,
+    output_set: HashMap<CFGPos, Vec<T>>,
     data: &'a mut GlobalData<'a>,
     p: &'a mut Program,
-    transfer: fn(&[Code], &Vec<String>) -> Vec<String>, // the transfer function
-    merge: fn(Vec<&Vec<String>>) -> Vec<String>,        // the merge function.
 }
 
 // TODO: best method for making merge, transfer overrideable? merge, transfer results in dynamic dispatch
 
-impl<'a> WorklistConfig<'a> {
+impl<'a, T> WorklistConfig<'a, T>
+where
+    T: DFDomainElement,
+{
     fn worklist(&self, data: &mut GlobalData) {
-        let mut in_set = HashMap::<CFGPos, Vec<String>>::new();
-        let mut out_set = HashMap::<CFGPos, Vec<String>>::new();
-
         let cfg = data.form_cfg();
         let mut wl = data.all_blocks();
         while !wl.is_empty() {
             let b = wl.first().unwrap().clone();
             let pred = predecessors(&b, &cfg).unwrap();
-            let m: Vec<&Vec<String>> = out_set
+            let m: &[Vec<T>] = self
+                .output_set
                 .iter()
                 .filter(|x| pred.contains(x.0))
                 .map(|x| x.1)
-                .collect();
-            in_set.insert(b, (self.merge)(m));
+                .collect()
+                .as_slice();
+            self.input_set.insert(b, T::merge(m));
 
-            let new_out = (self.transfer)(data.get_codeslice(&b), in_set.get(&b).unwrap());
-            let existing = out_set.get(&b);
+            let new_out = T::transfer(self.input_set.get(&b).unwrap(), data.get_codeslice(&b));
+            let existing = self.output_set.get(&b);
             let mut is_diff = false;
             if let None = existing {
                 is_diff = true;
@@ -64,7 +67,7 @@ impl<'a> WorklistConfig<'a> {
             if is_diff {
                 wl.extend(successors(&b, &cfg).unwrap().iter());
             }
-            out_set.insert(b, new_out);
+            self.output_set.insert(b, new_out);
         }
     }
 }
