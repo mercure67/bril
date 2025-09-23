@@ -1,13 +1,20 @@
-use bril_rs::Code;
-use std::collections::HashSet;
-
 use crate::data_flow::DFDomainElement;
+use bril_rs::{Code, Instruction};
+use std::collections::HashSet;
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+// https://doc.rust-lang.org/std/sync/atomic/struct.AtomicUsize.html apparently
+static COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+fn fresh(var: &str) -> String {
+    let id = COUNTER.fetch_add(1, Ordering::Relaxed);
+    format!("{}{}", var, id)
+}
 
 #[derive(PartialEq, Eq, Hash, Clone)]
 struct Defn {
     name: String,
     var: String,
-    var_type: bril_rs::Type,
 }
 
 impl DFDomainElement for Defn {
@@ -20,6 +27,20 @@ impl DFDomainElement for Defn {
     }
 
     fn transfer(input_set: &[Self], code: &[Code]) -> Vec<Self> {
-        todo!()
+        let mut set: HashSet<Self> = input_set.iter().cloned().collect();
+        for line in code {
+            match line {
+                Code::Instruction(Instruction::Constant { dest, .. })
+                | Code::Instruction(Instruction::Value { dest, .. }) => {
+                    set.retain(|d| d.var != *dest);
+                    set.insert(Defn {
+                        name: fresh(dest),
+                        var: dest.to_string(),
+                    });
+                }
+                _ => {}
+            }
+        }
+        set.into_iter().collect()
     }
 }
