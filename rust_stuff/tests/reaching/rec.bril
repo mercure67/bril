@@ -1,0 +1,24 @@
+@fact(n: int): int {
+.entry:
+  zero: int = const 0;
+  one: int = const 1;
+  cond: bool = eq n zero;
+  br cond .base .recurse1;
+
+.base:
+  ret one;
+
+.recurse1:
+  n1: int = sub n one;
+  tmp: int = call @fact n1;
+
+.recurse2:
+  result: int = mul n tmp;
+  ret result;
+}
+
+@main(n: int) {
+.main1:
+  res: int = call @fact n;
+  print res;
+}
