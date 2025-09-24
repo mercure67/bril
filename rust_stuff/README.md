@@ -47,7 +47,7 @@ We tested our implementation of the DFA algorithm for reaching definitions on tw
 
 Here's the output of `bril2json < tests/reaching/little.bril | target/debug/rust_stuff df-reaching`. Note that parameters are recorded at the outgoing set of the first block of each function.
 
-```json
+```
 block: f0.b0
 in: []
 out: [Defn { name: "fmainval0", var: "a" }, Defn { name: "fmainvbl1", var: "b" }, Defn { name: "fmainvcondl0", var: "cond" }]
