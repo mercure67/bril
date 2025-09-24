@@ -130,8 +130,9 @@ impl<'a> GlobalData<'a> {
 
     pub fn print_blocks(&mut self) {
         for f in self.program.functions.iter() {
-            println!("function name: {}", f.name);
             let data = self.data_map.get(&f.name).unwrap();
+            println!("function name: {} ({})", f.name, data.funcno);
+
             let mut lineno = 0;
             for (bno, b) in data.blocks.iter().enumerate() {
                 println!("  blockno: {}", bno);
@@ -304,7 +305,7 @@ impl<'a> GlobalData<'a> {
                 res.push(CFGPos {
                     funcno: v.funcno,
                     blockno: blockno,
-                })
+                });
             }
             funcno = funcno + 1;
         }

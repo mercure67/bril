@@ -43,6 +43,8 @@ where
         while !wl.is_empty() {
             //for _i in 0..10 {
             let b = wl.pop().unwrap();
+            //println!("nr {}", b);
+
             let pred = predecessors(&b, &cfg).unwrap();
 
             let m: Vec<&Vec<T>> = self
@@ -51,7 +53,9 @@ where
                 .filter(|x| pred.contains(x.0))
                 .map(|x| x.1)
                 .collect();
+            //println!("{:?}", m);
             self.input_set.insert(b, T::merge(&m));
+            //println!("-> {:?}", self.input_set.get(&b).unwrap());
 
             let new_out = T::transfer(self.input_set.get(&b).unwrap(), self.data.get_codeslice(&b));
             let existing = self.output_set.get(&b);
@@ -62,7 +66,9 @@ where
                 is_diff = *e != *new_out;
             }
             if is_diff {
-                wl.extend(successors(&b, &cfg).unwrap().iter());
+                let mut tmp: HashSet<CFGPos> = HashSet::from_iter(wl.into_iter());
+                tmp.extend(successors(&b, &cfg).unwrap().into_iter());
+                wl = tmp.into_iter().collect();
             }
 
             self.output_set.insert(b, new_out);
