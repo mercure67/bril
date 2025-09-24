@@ -1,8 +1,8 @@
 use crate::{data_flow::DFDomainElement, resolver::GlobalData, util::CFGPos};
 use bril_rs::{Code, Instruction};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug, Ord, PartialOrd)]
 pub enum CodeConst {
     Bool { v: bool },
     Int { v: i64 },
@@ -19,7 +19,7 @@ impl From<bril_rs::Literal> for CodeConst {
     }
 }
 
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug, Ord, PartialOrd)]
 pub struct ConstProp {
     name: String,
     val: CodeConst,
@@ -28,13 +28,41 @@ pub struct ConstProp {
 impl DFDomainElement for ConstProp {
     fn merge(input_sets: &Vec<&Vec<Self>>) -> Vec<Self> {
         let mut set = HashSet::<Self>::new();
+
         for v in input_sets {
-            //let tmp: HashSet<ConstProp> = HashSet::from_iter(v.into_iter().cloned());
-            //set = &set & &tmp;
-            set.extend(v.iter().cloned());
+            if v.is_empty() {
+                continue;
+            }
+            let tmp: HashSet<ConstProp> = HashSet::from_iter(v.into_iter().cloned());
+            if set.is_empty() {
+                set.extend(tmp);
+            } else {
+                set = &set & &tmp;
+            }
+
+            //set.extend(v.iter().cloned());
+        }
+        let mut tmp: Vec<Self> = set.into_iter().collect();
+        tmp.sort();
+        tmp
+
+        /*let mut names = HashMap::<String, u64>::new();
+
+        for j in set.iter() {
+            names
+                .entry(j.name.clone())
+                .and_modify(|x| *x = *x + 1)
+                .or_insert(1);
         }
 
-        set.into_iter().collect()
+        let mut tmp: Vec<Self> = set.into_iter().collect();
+        tmp.sort();
+        tmp = tmp
+            .into_iter()
+            .filter(|x| *names.get(&x.name).unwrap() == 1)
+            .collect();
+        tmp
+        */
     }
 
     fn transfer(input_set: &Vec<Self>, code: &[Code], _: &GlobalData, _: CFGPos) -> Vec<Self> {
@@ -64,8 +92,11 @@ impl DFDomainElement for ConstProp {
             }
         }
         let mut res: Vec<Self> = input_set.clone();
+        //println!("{:?}", res);
         res.retain(|x| !kills.contains(&x.name));
         res.extend(defs.into_iter());
+        res.sort();
+        //println!("{:?}", res);
         res
     }
 }
