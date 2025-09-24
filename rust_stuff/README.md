@@ -103,7 +103,7 @@ out: [Defn { name: "fmainvnl0", var: "n" }, Defn { name: "fmainvresl1", var: "re
 This output also matches our expectations. Note that this is an intraprocedural analysis, so the recursive call does not have an impact in the result.
 
 <p align="center">
-<img width="800" alt="rec.bril" src="tests/reaching/little.png" /></br>
+<img width="800" alt="rec.bril" src="tests/reaching/rec.png" /></br>
 <b>Figure 2:</b> CFG for <code>rec.bril</code>.
 </p>
 
