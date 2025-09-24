@@ -1,29 +1,33 @@
 # Bril optimization
 
-This is a tool that optimizes Bril programs using dead code elimination and local value numbering. It can be built with `cargo build` and can be run as follows:
+This is a tool for optimizing and analyzing Bril programs. It can be built with `cargo build` and can be run as follows:
 
 ```sh
 # Run in file mode
-target/debug/rust_stuff <path/to/program>.json {dce,lvn}
+target/debug/rust_stuff <path/to/program>.json {dce,lvn,df-reaching,df-const}
 
 # Run in pipe mode from a '.bril' file
-bril2json < <path/to/program>.bril | target/debug/rust_stuff - {dce,lvn}
+bril2json < <path/to/program>.bril | target/debug/rust_stuff {dce,lvn,df-reaching,df-const}
 ```
 
 ## Implemented modes
 
-- `dce` (dead code elimination): eliminates globally dead code (instructions whose results are never used) and locally dead code (reassignments before reads within a basic block).
-- `lvn` (local value numbering): performs local value numbering to eliminate redundant expressions whose values are already calculated somewhere else.
+- `dce`: dead code elimination
+- `lvn`: local value numbering
+- `df-reaching`: reaching definitions dataflow analysis
+- `df-const`: constant propagation dataflow analysis
 
 ## Testing
 
-We use snapshot testing with Turnt for dead code elimination, which can be run as follows:
+### Optimization passes
+
+We use snapshot testing with Turnt, which can be run as follows:
 
 ```sh
 turnt tests/*/*.bril
 ```
 
-More importantly, we use Brench to test the optimizations against all the benchmarks of the form
+We also use Brench to test optimizations against all the benchmarks at
 `../benchmarks/core/*.bril`, and plot the results using a Python script (dependent on Pandas and Matplotlib).
 This can be recreated by building with `cargo build`, then running Brench with:
 
@@ -34,3 +38,5 @@ brench brench.toml > benchmarks.csv
 And finally running the Python script with `python plot.py`, which generates a file `benchmarks.png` that should look like this:
 
 ![benchmarks](benchmarks.png)
+
+### Dataflow analysis

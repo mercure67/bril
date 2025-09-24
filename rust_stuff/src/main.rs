@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::{fs::File, io::BufReader};
 
 use crate::constprop::ConstProp;
-use crate::reaching_defns::Defn;
+use crate::resolver::Defn;
 use crate::util::CFGPos;
 
 mod constprop;

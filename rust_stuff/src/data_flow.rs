@@ -22,7 +22,7 @@ pub fn predecessors(p: &CFGPos, cfg: &CFG) -> Option<HashSet<CFGPos>> {
 //TODO: we might need a more sophisticated type for variables in the future, but ah well
 pub(crate) trait DFDomainElement: Sized + PartialEq {
     fn merge(input_sets: &Vec<&Vec<Self>>) -> Vec<Self>;
-    fn transfer(input_set: &Vec<Self>, code: &[Code]) -> Vec<Self>;
+    fn transfer(input_set: &Vec<Self>, code: &[Code], d: &GlobalData, pos: CFGPos) -> Vec<Self>;
 }
 
 pub struct WorklistConfig<'a, T: DFDomainElement> {
@@ -53,7 +53,7 @@ where
                 .collect();
             self.input_set.insert(b, T::merge(&m));
 
-            let new_out = T::transfer(self.input_set.get(&b).unwrap(), self.data.get_codeslice(&b));
+            let new_out = T::transfer(self.input_set.get(&b).unwrap(), self.data.get_codeslice(&b), self.data, b);
             let existing = self.output_set.get(&b);
             let mut is_diff = false;
             if let None = existing {

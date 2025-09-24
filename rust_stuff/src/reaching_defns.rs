@@ -1,21 +1,8 @@
 use crate::data_flow::DFDomainElement;
-use bril_rs::{Code, Instruction};
+use crate::resolver::{Defn, GlobalData};
+use crate::util::CFGPos;
+use bril_rs::{Code};
 use std::collections::HashSet;
-use std::sync::atomic::{AtomicUsize, Ordering};
-
-// https://doc.rust-lang.org/std/sync/atomic/struct.AtomicUsize.html apparently
-static COUNTER: AtomicUsize = AtomicUsize::new(0);
-
-fn fresh(var: &str) -> String {
-    let id = COUNTER.fetch_add(1, Ordering::Relaxed);
-    format!("{}{}", var, id)
-}
-
-#[derive(PartialEq, Eq, Hash, Clone, Debug)]
-pub struct Defn {
-    name: String,
-    var: String,
-}
 
 impl DFDomainElement for Defn {
     fn merge(input_sets: &Vec<&Vec<Self>>) -> Vec<Self> {
@@ -23,24 +10,28 @@ impl DFDomainElement for Defn {
         for v in input_sets {
             set.extend(v.iter().cloned());
         }
-        set.into_iter().collect()
+        let mut vec: Vec<Self> = set.into_iter().collect();
+        vec.sort();
+        vec
     }
 
-    fn transfer(input_set: &Vec<Self>, code: &[Code]) -> Vec<Self> {
+    fn transfer(
+        input_set: &Vec<Self>,
+        code: &[Code],
+        d: &GlobalData,
+        pos: CFGPos,
+    ) -> Vec<Self> {
         let mut set: HashSet<Self> = input_set.iter().cloned().collect();
-        for line in code {
-            match line {
-                Code::Instruction(Instruction::Constant { dest, .. })
-                | Code::Instruction(Instruction::Value { dest, .. }) => {
-                    set.retain(|d| d.var != *dest);
-                    set.insert(Defn {
-                        name: fresh(dest),
-                        var: dest.to_string(),
-                    });
-                }
-                _ => {}
-            }
+
+        let fname = &d.program.functions[pos.funcno].name;
+
+        for (l, def) in &d.get_func_data(&fname).unwrap().defns {
+            set.retain(|d| d.var != def.var);
+            set.insert(Defn::from(def.var.clone(), *l, fname.clone()));
         }
-        set.into_iter().collect()
+
+        let mut vec: Vec<Self> = set.into_iter().collect();
+        vec.sort();
+        vec
     }
 }

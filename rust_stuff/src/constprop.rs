@@ -1,4 +1,4 @@
-use crate::data_flow::DFDomainElement;
+use crate::{data_flow::DFDomainElement, resolver::GlobalData, util::CFGPos};
 use bril_rs::{Code, Instruction};
 use std::collections::HashSet;
 
@@ -37,7 +37,7 @@ impl DFDomainElement for ConstProp {
         set.into_iter().collect()
     }
 
-    fn transfer(input_set: &Vec<Self>, code: &[Code]) -> Vec<Self> {
+    fn transfer(input_set: &Vec<Self>, code: &[Code], _: &GlobalData, _: CFGPos) -> Vec<Self> {
         let mut defs = HashSet::<Self>::new();
         let mut kills = HashSet::<String>::new();
         for line in code {
