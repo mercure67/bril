@@ -1,17 +1,32 @@
 use bril_rs::*;
-
 use crate::util::*;
-
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+/// Definition of a variable in a Bril program.
+/// 
+/// # Example
+/// Consider this snippet on line 3 of a function `b`:
+/// ```
+/// a: int = const 5;
+/// ```
+/// This definition of `a` will be represented with name
+/// `fbval3` and var `a`.
 #[derive(Default, PartialEq, Eq, Hash, Clone, Debug, Ord, PartialOrd)]
 pub struct Defn {
+    /// Unique name of the definition.
     pub(crate) name: String,
-    pub(crate) var: String, // var name it refers to
+    /// Non-unique name of the variable that the definition corresponds to.
+    pub(crate) var: String,
 }
 
 impl Defn {
+    /// Get a new definition from a variable name, line number, and function name.
+    /// 
+    /// # Arguments
+    /// * `v` - name of the variable
+    /// * `l` - line number of the definition, relative to the function
+    /// * `f` - name of the function
     pub fn from(v: String, l: usize, f: String) -> Defn {
         Defn {
             name: format!("f{f}v{v}l{l}"),
@@ -21,22 +36,38 @@ impl Defn {
 }
 
 // TODO: handle args
+
+/// Metadata of a Bril function.
 #[derive(Default)]
 pub struct FunctionData {
+    /// Unique function index, used to locate it within the `GlobalData` struct.
     pub funcno: usize,
-    pub callers: HashSet<CFGPos>, // function plus blockno of callers
-    pub calls: HashMap<usize, String>, // map of line to function it calls
-    pub defns: Vec<(usize, Defn)>, // map of line to definition, some lines have multiple
+    /// Set of basic blocks, inside or outside this function, that call this function.
+    pub callers: HashSet<CFGPos>,
+    /// Map of line numbers to function calls.
+    pub calls: HashMap<usize, String>,
+    /// Multimap of line numbers to definitions.
+    pub defns: Vec<(usize, Defn)>,
+    /// Set of code ranges corresponding to the basic blocks.
     pub blocks: Vec<CodeRange>,
+    /// Map of labels and block indices that they correspond.
     pub labels: HashMap<String, Blockno>,
+    /// Set of line numbers with return instructions.
     pub returns: Vec<usize>,
 }
 
 impl FunctionData {
+    /// Populate the function metadata with information from the given Bril function.
+    ///
+    /// Fills in blocks, labels, definitions, calls, and returns.
+    /// Does not update the `callers` or `funcno` fields.
+    ///
+    /// # Arguments
+    /// * `f` - reference to the Bril function
+    ///
+    /// # Returns
+    /// Set of pairs `(function_name, blockno)` for functions called by this function.
     pub fn populate(&mut self, f: &bril_rs::Function) -> HashSet<(String, Blockno)> {
-        // populate everything other than the callers and funcno.
-        // returns a vector of all called function(s) in this function
-
         let mut block_range: CodeRange = (0, 0);
         let mut calls = HashSet::<(String, Blockno)>::new();
         let mut num_blocks = 0;
@@ -54,29 +85,23 @@ impl FunctionData {
                     let should_add_block = match i {
                         Instruction::Value { op, funcs, .. } => {
                             if let ValueOps::Call = op {
-                                // handle calls
                                 let func_called = funcs.first().unwrap();
                                 calls.insert((func_called.clone(), num_blocks));
                                 self.calls.insert(ino, func_called.clone());
-                                true
-                            } else {
-                                false
                             }
+                            false
                         }
                         Instruction::Effect { op, funcs, .. } => match op {
                             EffectOps::Return => {
-                                // handle return
                                 self.returns.push(ino);
                                 true
                             }
                             EffectOps::Jump | EffectOps::Branch => true,
                             EffectOps::Call => {
-                                // handle calls
                                 let func_called = funcs.first().unwrap();
                                 calls.insert((func_called.clone(), num_blocks));
-
                                 self.calls.insert(ino, func_called.clone());
-                                true
+                                false
                             }
                             _ => false,
                         },
@@ -85,25 +110,21 @@ impl FunctionData {
                     if should_add_block {
                         self.blocks.push(block_range);
                         num_blocks = num_blocks + 1;
-
                         block_range = (block_range.1, block_range.1);
                     }
 
-                    if let Instruction::Constant { dest, .. } | Instruction::Value { dest, .. } = i
-                    {
+                    if let Instruction::Constant { dest, .. } | Instruction::Value { dest, .. } = i {
                         self.defns
                             .push((ino, Defn::from(dest.to_string(), ino, f.name.clone())));
                     }
                 }
                 Code::Label { label, pos: _ } => {
                     if !self.labels.contains_key(label) {
-                        // TODO: safety: panic on duplicated labels
                         if block_range.1 - block_range.0 > 0 {
                             self.blocks.push(block_range);
                             num_blocks = num_blocks + 1;
                         }
-                        self.labels.insert(label.clone(), num_blocks); // TODO: check logic here: for a block which hasn't been created
-
+                        self.labels.insert(label.clone(), num_blocks);
                         block_range = (block_range.1, block_range.1 + 1);
                     }
                 }
@@ -116,19 +137,30 @@ impl FunctionData {
     }
 }
 
+/// Global metadata for a Bril program.
+/// 
+/// Stores data for all functions and provides utilities to analyze
+/// and print control-flow and block-level information.
 pub struct GlobalData<'a> {
+    /// Map of function names to their metadata.
     pub data_map: HashMap<String, FunctionData>,
+    /// Complete Bril program.
     pub program: &'a mut Program,
 }
 
 impl<'a> GlobalData<'a> {
+    /// Get a reference to function metadata by name.
+    ///
+    /// # Arguments
+    /// * `name` - function name
     pub fn get_func_data(&self, name: &String) -> Option<&FunctionData> {
         self.data_map.get(name)
     }
 
+    /// Initialize `data_map` by creating entries for each function in the program.
+    ///
+    /// Panics if a function name is defined twice.
     pub fn initial_fill(&mut self) {
-        // does not yet handle imports!
-        // populate GlobalData: create a new data set for each function name
         for (fno, f) in self.program.functions.iter().enumerate() {
             if self.data_map.contains_key(&f.name) {
                 panic!("function is defined twice");
@@ -138,6 +170,11 @@ impl<'a> GlobalData<'a> {
             self.data_map.insert(f.name.clone(), data);
         }
     }
+
+    /// Populate block and call metadata for all functions.
+    ///
+    /// Updates `blocks`, `labels`, `defns`, `calls`, and `returns` for each function,
+    /// and adds caller information to called functions.
     pub fn form_blocks(&mut self) {
         for f in self.program.functions.iter() {
             let fdata = self.data_map.get_mut(&f.name).unwrap();
@@ -155,6 +192,7 @@ impl<'a> GlobalData<'a> {
         }
     }
 
+    /// Print basic blocks of all functions with their instructions and metadata.
     pub fn print_blocks(&mut self) {
         for f in self.program.functions.iter() {
             let data = self.data_map.get(&f.name).unwrap();
@@ -175,9 +213,9 @@ impl<'a> GlobalData<'a> {
             println!("");
         }
     }
-    pub fn print_blocks_compliance(&mut self) {
-        // print the basic blocks just like the basic blocks Python script would
 
+    /// Print basic blocks in a format similar to the Python Bril block script.
+    pub fn print_blocks_compliance(&mut self) {
         let func = &self.program.functions[0];
         let data = self.get_func_data(&func.name).unwrap();
         for block in data.blocks.iter() {
@@ -196,12 +234,19 @@ impl<'a> GlobalData<'a> {
         }
     }
 
+    /// Get a slice of instructions corresponding to a control-flow graph position.
+    ///
+    /// # Arguments
+    /// * `pos` - CFG position
     pub fn get_codeslice(&'a self, pos: &CFGPos) -> &'a [Code] {
         let func = &self.program.functions[pos.funcno];
         let cr = self.get_func_data(&func.name).unwrap().blocks[pos.blockno];
         &func.instrs[cr.0..cr.1]
     }
 
+    /// Construct the CFG for the whole program.
+    ///
+    /// Returns a CFG, which is a map from each block position to the set of successor blocks.
     pub fn form_cfg(&mut self) -> CFG {
         let mut res = CFG::new();
 
@@ -234,8 +279,7 @@ impl<'a> GlobalData<'a> {
                                         .collect();
                                     block_res.extend(ext);
                                 }
-                                EffectOps::Return => {
-                                }
+                                EffectOps::Return => {}
                                 _ => {
                                     if blockno + 1 < data.blocks.len() {
                                         block_res.insert(CFGPos {
@@ -276,6 +320,10 @@ impl<'a> GlobalData<'a> {
         res
     }
 
+    /// Print the CFG.
+    ///
+    /// # Arguments
+    /// * `c` - reference to the CFG
     pub fn print_cfg(&self, c: &CFG) {
         for (k, v) in c {
             let curr_func = self.program.functions.get(k.funcno).unwrap();
@@ -289,8 +337,7 @@ impl<'a> GlobalData<'a> {
         }
     }
 
-    // number beyond last block indicates return to end of main
-
+    /// Get a list of all block positions across all functions.
     pub fn all_blocks(&self) -> Vec<CFGPos> {
         let mut res = Vec::<CFGPos>::new();
 
@@ -307,6 +354,10 @@ impl<'a> GlobalData<'a> {
         res
     }
 
+    /// Get the function name corresponding to a function index.
+    ///
+    /// # Arguments
+    /// * `fno` - function index
     pub fn funcname_from_funcno(&self, fno: usize) -> Option<String> {
         for (k, v) in self.data_map.iter() {
             if v.funcno == fno {

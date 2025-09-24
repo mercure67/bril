@@ -18,6 +18,7 @@ mod util;
 
 #[derive(Subcommand)]
 enum Task {
+    CFG,
     DCE, // dead code elimination
     LVN,
     DFReaching,
@@ -78,6 +79,11 @@ fn main() {
     // d.print_blocks_compliance(&v);
 
     match args.task {
+        Task::CFG => {
+            let cfg = d.form_cfg();
+            d.print_blocks();
+            d.print_cfg(&cfg);
+        }
         Task::DCE => println!("{}", dce::global_dce(&d)),
         Task::LVN => {
             let mut lvn = lvn::LVNTable::default();
@@ -86,9 +92,6 @@ fn main() {
                 data_map: HashMap::<String, resolver::FunctionData>::new(),
                 program: &mut prog,
             };
-
-            d.initial_fill();
-            d.form_blocks();
             println!("{}", dce::global_dce(&d));
         }
         Task::DFReaching => {
