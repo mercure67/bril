@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 pub type CodeRange = (usize, usize);
 pub type Blockno = usize;
 
-#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, Hash, Debug, Copy, Clone, Ord, PartialOrd)]
 pub struct CFGPos {
     pub funcno: usize,
     pub blockno: Blockno,

@@ -40,12 +40,14 @@ where
     pub fn worklist(&mut self) {
         let cfg = self.data.form_cfg();
         let mut wl = self.data.all_blocks();
+        wl.sort();
         while !wl.is_empty() {
             //for _i in 0..10 {
             let b = wl.pop().unwrap();
             //println!("nr {}", b);
 
             let pred = predecessors(&b, &cfg).unwrap();
+            //println!("pred {:?}", pred);
 
             let m: Vec<&Vec<T>> = self
                 .output_set
@@ -57,7 +59,13 @@ where
             self.input_set.insert(b, T::merge(&m));
             //println!("-> {:?}", self.input_set.get(&b).unwrap());
 
-            let new_out = T::transfer(self.input_set.get(&b).unwrap(), self.data.get_codeslice(&b), self.data, b);
+            let new_out = T::transfer(
+                self.input_set.get(&b).unwrap(),
+                self.data.get_codeslice(&b),
+                self.data,
+                b,
+            );
+            //println!("=> {:?}", new_out);
             let existing = self.output_set.get(&b);
             let mut is_diff = false;
             if let None = existing {
@@ -69,6 +77,7 @@ where
                 let mut tmp: HashSet<CFGPos> = HashSet::from_iter(wl.into_iter());
                 tmp.extend(successors(&b, &cfg).unwrap().into_iter());
                 wl = tmp.into_iter().collect();
+                wl.sort();
             }
 
             self.output_set.insert(b, new_out);
@@ -82,6 +91,7 @@ where
             println!("block: {}", block);
             println!("in: {:?}", self.input_set.get(&block).unwrap());
             println!("out: {:?}", self.output_set.get(&block).unwrap());
+            println!();
         }
     }
 }

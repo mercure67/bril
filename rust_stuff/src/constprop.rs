@@ -65,28 +65,31 @@ impl DFDomainElement for ConstProp {
         */
     }
 
-    fn transfer(input_set: &Vec<Self>, code: &[Code], _: &GlobalData, _: CFGPos) -> Vec<Self> {
+    fn transfer(input_set: &Vec<Self>, code: &[Code], d: &GlobalData, pos: CFGPos) -> Vec<Self> {
         let mut defs = HashSet::<Self>::new();
         let mut kills = HashSet::<String>::new();
+        let funcname = d.funcname_from_funcno(pos.funcno).unwrap();
         for line in code {
             match line {
                 Code::Instruction(Instruction::Constant { dest, value, .. }) => {
+                    let rel_dest = funcname.clone() + &dest.clone();
                     let c = ConstProp {
-                        name: dest.clone(),
+                        name: rel_dest.clone(),
                         val: CodeConst::from(value.clone()),
                     };
                     if !input_set.contains(&c) {
                         let names: Vec<String> = input_set.iter().map(|x| x.name.clone()).collect();
-                        if names.contains(dest) {
+                        if names.contains(&rel_dest) {
                             // same name, diff val
-                            kills.insert(dest.clone());
+                            kills.insert(rel_dest.clone());
                         } else {
                             defs.insert(c);
                         }
                     }
                 }
                 Code::Instruction(Instruction::Value { dest, .. }) => {
-                    kills.insert(dest.clone());
+                    let rel_dest = funcname.clone() + &dest.clone();
+                    kills.insert(rel_dest.clone());
                 }
                 _ => {}
             }

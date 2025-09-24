@@ -7,8 +7,8 @@ use std::collections::HashSet;
 
 #[derive(Default, PartialEq, Eq, Hash, Clone, Debug, Ord, PartialOrd)]
 pub struct Defn {
-    pub(crate) name: String, pub(crate) // globally unique name of defn
-    var: String,  // var name it refers to
+    pub(crate) name: String,
+    pub(crate) var: String, // var name it refers to
 }
 
 impl Defn {
@@ -337,5 +337,14 @@ impl<'a> GlobalData<'a> {
             funcno = funcno + 1;
         }
         res
+    }
+
+    pub fn funcname_from_funcno(&self, fno: usize) -> Option<String> {
+        for (k, v) in self.data_map.iter() {
+            if v.funcno == fno {
+                return Some(k.clone());
+            }
+        }
+        return None;
     }
 }
