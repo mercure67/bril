@@ -1,4 +1,4 @@
-# Bril optimization
+# Bril optimization and analysis
 
 This is a tool for optimizing and analyzing Bril programs. It can be built with `cargo build` and can be run as follows:
 
