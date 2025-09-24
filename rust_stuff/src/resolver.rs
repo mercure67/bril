@@ -7,8 +7,8 @@ use std::collections::HashSet;
 
 #[derive(Default, PartialEq, Eq, Hash, Clone, Debug, Ord, PartialOrd)]
 pub struct Defn {
-    pub(crate) name: String, pub(crate) // globally unique name of defn
-    var: String,  // var name it refers to
+    pub(crate) name: String,
+    pub(crate) var: String, // var name it refers to
 }
 
 impl Defn {
@@ -26,7 +26,7 @@ pub struct FunctionData {
     pub funcno: usize,
     pub callers: HashSet<CFGPos>, // function plus blockno of callers
     pub calls: HashMap<usize, String>, // map of line to function it calls
-    pub defns: HashMap<usize, Defn>, // map of line to definition
+    pub defns: Vec<(usize, Defn)>, // map of line to definition, some lines have multiple
     pub blocks: Vec<CodeRange>,
     pub labels: HashMap<String, Blockno>,
     pub returns: Vec<usize>,
@@ -43,7 +43,7 @@ impl FunctionData {
 
         for a in &f.args {
             self.defns
-                .insert(0, Defn::from(a.name.clone(), 0, f.name.clone()));
+                .push((0, Defn::from(a.name.clone(), 0, f.name.clone())));
         }
 
         for (ino, instr) in f.instrs.iter().enumerate() {
@@ -92,7 +92,7 @@ impl FunctionData {
                     if let Instruction::Constant { dest, .. } | Instruction::Value { dest, .. } = i
                     {
                         self.defns
-                            .insert(ino, Defn::from(dest.to_string(), ino, f.name.clone()));
+                            .push((ino, Defn::from(dest.to_string(), ino, f.name.clone())));
                     }
                 }
                 Code::Label { label, pos: _ } => {
