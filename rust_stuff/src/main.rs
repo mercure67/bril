@@ -5,8 +5,8 @@ use std::rc::Rc;
 use std::{fs::File, io::BufReader};
 
 use crate::constprop::ConstProp;
-use crate::resolver::Defn;
-use crate::util::CFGPos;
+use crate::resolver::{Defn};
+use crate::util::{CFGPos, CFG};
 
 mod constprop;
 mod data_flow;
@@ -75,7 +75,6 @@ fn main() {
     };
     d.initial_fill();
     d.form_blocks();
-    //d.print_blocks(&v);
     // d.print_blocks_compliance(&v);
 
     match args.task {
@@ -99,13 +98,9 @@ fn main() {
                 data: &mut d,
             };
             w.worklist();
-            println!("{:?}", w.input_set);
-            println!("{:?}", w.output_set);
+            w.print();
         }
         Task::DFConst => {
-            d.print_blocks();
-            let c = d.form_cfg();
-            d.print_cfg(&c);
             let mut w = data_flow::WorklistConfig::<ConstProp> {
                 input_set: HashMap::<CFGPos, Vec<ConstProp>>::new(),
                 output_set: HashMap::<CFGPos, Vec<ConstProp>>::new(),

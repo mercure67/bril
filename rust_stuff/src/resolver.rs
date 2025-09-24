@@ -207,101 +207,69 @@ impl<'a> GlobalData<'a> {
 
         for func in self.program.functions.iter() {
             let data = self.get_func_data(&func.name).unwrap();
+
             for (blockno, block) in data.blocks.iter().enumerate() {
                 let mut block_res = HashSet::<CFGPos>::new();
-                let terminator = func.instrs.get(block.1 - 1).unwrap();
 
-                // TODO: move block_res extension out
-                if let Code::Instruction(instr) = terminator {
-                    match instr {
-                        Instruction::Effect {
-                            funcs, op, labels, ..
-                        } => match op {
-                            EffectOps::Jump | EffectOps::Branch => {
-                                let ext: Vec<CFGPos> = labels
-                                    .iter()
-                                    .map(|x| CFGPos {
-                                        funcno: data.funcno,
-                                        blockno: data.labels.get(x).unwrap().clone(),
-                                    })
-                                    .collect();
-                                block_res.extend(ext);
-                            }
-                            EffectOps::Call => {
-                                let mut ext: Vec<CFGPos> = funcs
-                                    .iter()
-                                    .map(|x| CFGPos {
-                                        funcno: self.get_func_data(x).unwrap().funcno,
-                                        blockno: 0,
-                                    })
-                                    .collect();
-                                if blockno < data.blocks.len() - 1 {
-                                    ext.push(CFGPos {
+                let (start, end) = *block;
+                if start == end {
+                    if blockno + 1 < data.blocks.len() {
+                        block_res.insert(CFGPos {
+                            funcno: data.funcno,
+                            blockno: blockno + 1,
+                        });
+                    }
+                } else {
+                    let terminator = &func.instrs[end - 1];
+                    if let Code::Instruction(instr) = terminator {
+                        match instr {
+                            Instruction::Effect { op, labels, .. } => match op {
+                                EffectOps::Jump | EffectOps::Branch => {
+                                    let ext: Vec<CFGPos> = labels
+                                        .iter()
+                                        .map(|x| CFGPos {
+                                            funcno: data.funcno,
+                                            blockno: data.labels[x],
+                                        })
+                                        .collect();
+                                    block_res.extend(ext);
+                                }
+                                EffectOps::Return => {
+                                }
+                                _ => {
+                                    if blockno + 1 < data.blocks.len() {
+                                        block_res.insert(CFGPos {
+                                            funcno: data.funcno,
+                                            blockno: blockno + 1,
+                                        });
+                                    }
+                                }
+                            },
+                            Instruction::Value { .. } => {
+                                if blockno + 1 < data.blocks.len() {
+                                    block_res.insert(CFGPos {
                                         funcno: data.funcno,
                                         blockno: blockno + 1,
-                                    })
+                                    });
                                 }
-
-                                block_res.extend(ext);
                             }
-                            EffectOps::Return => {
-                                block_res.extend(data.callers.iter());
-                            }
-
                             _ => {
-                                if blockno < data.blocks.len() - 1 {
+                                if blockno + 1 < data.blocks.len() {
                                     block_res.insert(CFGPos {
                                         funcno: data.funcno,
                                         blockno: blockno + 1,
                                     });
                                 }
-                            }
-                        },
-                        Instruction::Value { funcs, op, .. } => {
-                            if let ValueOps::Call = op {
-                                let mut ext: Vec<CFGPos> = funcs
-                                    .iter()
-                                    .map(|x| CFGPos {
-                                        funcno: self.get_func_data(x).unwrap().funcno,
-                                        blockno: 0,
-                                    })
-                                    .collect();
-                                if blockno < data.blocks.len() - 1 {
-                                    ext.push(CFGPos {
-                                        funcno: data.funcno,
-                                        blockno: blockno + 1,
-                                    })
-                                }
-
-                                block_res.extend(ext);
-                            } else {
-                                if blockno < data.blocks.len() - 1 {
-                                    block_res.insert(CFGPos {
-                                        funcno: data.funcno,
-                                        blockno: blockno + 1,
-                                    });
-                                }
-                            }
-                        }
-                        _ => {
-                            if blockno < data.blocks.len() - 1 {
-                                block_res.insert(CFGPos {
-                                    funcno: data.funcno,
-                                    blockno: blockno + 1,
-                                });
                             }
                         }
                     }
                 }
+
                 let k = CFGPos {
                     funcno: data.funcno,
-                    blockno: blockno,
+                    blockno,
                 };
-                if res.contains_key(&k) {
-                    res.get_mut(&k).unwrap().extend(block_res);
-                } else {
-                    res.insert(k, block_res);
-                }
+                res.entry(k).or_default().extend(block_res);
             }
         }
 
