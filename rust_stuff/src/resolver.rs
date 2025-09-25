@@ -1,10 +1,10 @@
-use bril_rs::*;
 use crate::util::*;
+use bril_rs::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
 /// Definition of a variable in a Bril program.
-/// 
+///
 /// # Example
 /// Consider this snippet on line 3 of a function `b`:
 /// ```
@@ -22,7 +22,7 @@ pub struct Defn {
 
 impl Defn {
     /// Get a new definition from a variable name, line number, and function name.
-    /// 
+    ///
     /// # Arguments
     /// * `v` - name of the variable
     /// * `l` - line number of the definition, relative to the function
@@ -113,7 +113,8 @@ impl FunctionData {
                         block_range = (block_range.1, block_range.1);
                     }
 
-                    if let Instruction::Constant { dest, .. } | Instruction::Value { dest, .. } = i {
+                    if let Instruction::Constant { dest, .. } | Instruction::Value { dest, .. } = i
+                    {
                         self.defns
                             .push((ino, Defn::from(dest.to_string(), ino, f.name.clone())));
                     }
@@ -138,7 +139,7 @@ impl FunctionData {
 }
 
 /// Global metadata for a Bril program.
-/// 
+///
 /// Stores data for all functions and provides utilities to analyze
 /// and print control-flow and block-level information.
 pub struct GlobalData<'a> {
@@ -248,6 +249,7 @@ impl<'a> GlobalData<'a> {
     ///
     /// Returns a CFG, which is a map from each block position to the set of successor blocks.
     pub fn form_cfg(&mut self) -> CFG {
+        // TODO: limit to function local scope
         let mut res = CFG::new();
 
         for func in self.program.functions.iter() {
@@ -264,47 +266,50 @@ impl<'a> GlobalData<'a> {
                             blockno: blockno + 1,
                         });
                     }
-                } else {
-                    let terminator = &func.instrs[end - 1];
-                    if let Code::Instruction(instr) = terminator {
-                        match instr {
-                            Instruction::Effect { op, labels, .. } => match op {
-                                EffectOps::Jump | EffectOps::Branch => {
-                                    let ext: Vec<CFGPos> = labels
-                                        .iter()
-                                        .map(|x| CFGPos {
-                                            funcno: data.funcno,
-                                            blockno: data.labels[x],
-                                        })
-                                        .collect();
-                                    block_res.extend(ext);
-                                }
-                                EffectOps::Return => {}
-                                _ => {
-                                    if blockno + 1 < data.blocks.len() {
-                                        block_res.insert(CFGPos {
-                                            funcno: data.funcno,
-                                            blockno: blockno + 1,
-                                        });
-                                    }
-                                }
-                            },
-                            Instruction::Value { .. } => {
-                                if blockno + 1 < data.blocks.len() {
-                                    block_res.insert(CFGPos {
-                                        funcno: data.funcno,
-                                        blockno: blockno + 1,
-                                    });
-                                }
+                    continue;
+                }
+                let terminator = &func.instrs[end - 1];
+
+                let Code::Instruction(instr) = terminator else {
+                    continue;
+                };
+
+                match instr {
+                    Instruction::Effect { op, labels, .. } => match op {
+                        EffectOps::Jump | EffectOps::Branch => {
+                            let ext: Vec<CFGPos> = labels
+                                .iter()
+                                .map(|x| CFGPos {
+                                    funcno: data.funcno,
+                                    blockno: data.labels[x],
+                                })
+                                .collect();
+                            block_res.extend(ext);
+                        }
+                        EffectOps::Return => {}
+                        _ => {
+                            if blockno + 1 < data.blocks.len() {
+                                block_res.insert(CFGPos {
+                                    funcno: data.funcno,
+                                    blockno: blockno + 1,
+                                });
                             }
-                            _ => {
-                                if blockno + 1 < data.blocks.len() {
-                                    block_res.insert(CFGPos {
-                                        funcno: data.funcno,
-                                        blockno: blockno + 1,
-                                    });
-                                }
-                            }
+                        }
+                    },
+                    Instruction::Value { .. } => {
+                        if blockno + 1 < data.blocks.len() {
+                            block_res.insert(CFGPos {
+                                funcno: data.funcno,
+                                blockno: blockno + 1,
+                            });
+                        }
+                    }
+                    _ => {
+                        if blockno + 1 < data.blocks.len() {
+                            block_res.insert(CFGPos {
+                                funcno: data.funcno,
+                                blockno: blockno + 1,
+                            });
                         }
                     }
                 }
@@ -330,7 +335,7 @@ impl<'a> GlobalData<'a> {
 
             print!("{}: block {} ->", curr_func.name, k.blockno);
             for pos in v {
-                let subname: &String = &self.program.functions.get(pos.funcno).unwrap().name;
+                let subname = self.funcname_from_funcno(pos.funcno).unwrap();
                 print!(" {}.b{}", subname, pos.blockno);
             }
             println!("");

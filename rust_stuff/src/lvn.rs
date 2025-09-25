@@ -167,99 +167,100 @@ impl LVNTable {
         let mut res = Vec::<Code>::new();
         for code in instrs[r.0..r.1].into_iter() {
             // only accept instructions
-            if let Code::Instruction(instr) = code {
-                //println!("{}", instr);
-                match instr {
-                    Instruction::Constant {
-                        dest,
-                        const_type: t,
-                        ..
-                    }
-                    | Instruction::Value {
-                        dest, op_type: t, ..
-                    } => {
-                        let curr_expr = self.instr_to_rval(instr).unwrap();
-                        let dest_overwritten = false;
 
-                        let mut inst_dest = dest.clone();
+            let Code::Instruction(instr) = code else {
+                res.push(code.clone());
+                continue;
+            };
+            //println!("{}", instr);
+            //constant or values are the things we care about
 
-                        // remove exprs that refernece overwritten dest
-                        self.exprs.retain(|k, _| {
-                            if let Rval::Value(_, args, _) = k {
-                                !args.iter().any(|a| match a {
-                                    ValueArg::Arg(name) => name == &inst_dest,
-                                    ValueArg::Remapped(_) => false,
-                                })
-                            } else {
-                                true
-                            }
-                        });
-                        let table_entry = self.exprs.get(&curr_expr);
+            let (Instruction::Constant {
+                dest,
+                const_type: t,
+                ..
+            }
+            | Instruction::Value {
+                dest, op_type: t, ..
+            }) = instr
+            else {
+                res.push(code.clone());
+                continue;
+            };
 
-                        let entry_num = if let Some(i) = table_entry {
-                            // the table entry already exists, it is i
-                            // idx is the entry number
-                            // somehow replace the instruction
+            // current instruction is a constant or value
+            let curr_expr = self.instr_to_rval(instr).unwrap();
+            let dest_overwritten = false;
 
-                            // anything using this as an arg should instead refer to what's been calculated
-                            let new_instr = Instruction::Value {
-                                args: Vec::from([self.entries[*i].name.clone()]),
-                                dest: inst_dest.clone(),
-                                funcs: Vec::new(),
-                                labels: Vec::new(),
-                                op: ValueOps::Id,
-                                pos: None, // TODO: handle
-                                op_type: t.clone(),
-                            };
-                            res.push(Code::Instruction(new_instr));
-                            *i
-                        } else {
-                            let num = self.entries.len(); // new value number
-                            let mut new_instr = instr.clone();
-                            if dest_overwritten {
-                                inst_dest = String::from("overwritten_") + &inst_dest;
-                                // set new instructions dest to this new thing
-                            }
+            let mut inst_dest = dest.clone();
 
-                            // https://stackoverflow.com/questions/54162832/is-there-a-way-to-create-a-copy-of-an-enum-with-some-field-values-updated
-
-                            match &mut new_instr {
-                                Instruction::Constant { dest, .. } => *dest = inst_dest.clone(),
-                                Instruction::Value { args, dest, .. } => {
-                                    *dest = inst_dest.clone();
-                                    *args = args.iter().map(|x| self.get_remapped_arg(x)).collect();
-                                }
-                                _ => (),
-                            }
-
-                            self.exprs.insert(curr_expr, num);
-                            self.entries.push(LVNEntry {
-                                name: inst_dest.clone(),
-                            }); // dest
-
-                            res.push(Code::Instruction(new_instr));
-
-                            num
-                        };
-
-                        // entry_idx is the index which the assignment should point to
-
-                        // if there is some destination, map it to the correct entry
-
-                        self.remaps.insert(inst_dest, entry_num);
-                    }
-                    _ => {
-                        res.push(code.clone());
-                    }
+            // remove exprs that refernece overwritten dest
+            self.exprs.retain(|k, _| {
+                if let Rval::Value(_, args, _) = k {
+                    !args.iter().any(|a| match a {
+                        ValueArg::Arg(name) => name == &inst_dest,
+                        ValueArg::Remapped(_) => false,
+                    })
+                } else {
+                    true
                 }
+            });
+            let table_entry = self.exprs.get(&curr_expr);
+
+            let entry_num = if let Some(i) = table_entry {
+                // the table entry already exists, it is i
+                // idx is the entry number
+                // somehow replace the instruction
+
+                // anything using this as an arg should instead refer to what's been calculated
+                let new_instr = Instruction::Value {
+                    args: Vec::from([self.entries[*i].name.clone()]),
+                    dest: inst_dest.clone(),
+                    funcs: Vec::new(),
+                    labels: Vec::new(),
+                    op: ValueOps::Id,
+                    pos: None, // TODO: handle
+                    op_type: t.clone(),
+                };
+                res.push(Code::Instruction(new_instr));
+                *i
+            } else {
+                let num = self.entries.len(); // new value number
+                let mut new_instr = instr.clone();
+                if dest_overwritten {
+                    inst_dest = String::from("overwritten_") + &inst_dest;
+                    // set new instructions dest to this new thing
+                }
+
+                // https://stackoverflow.com/questions/54162832/is-there-a-way-to-create-a-copy-of-an-enum-with-some-field-values-updated
+
+                match &mut new_instr {
+                    Instruction::Constant { dest, .. } => *dest = inst_dest.clone(),
+                    Instruction::Value { args, dest, .. } => {
+                        *dest = inst_dest.clone();
+                        *args = args.iter().map(|x| self.get_remapped_arg(x)).collect();
+                    }
+                    _ => (),
+                }
+
+                self.exprs.insert(curr_expr, num);
+                self.entries.push(LVNEntry {
+                    name: inst_dest.clone(),
+                }); // dest
+
+                res.push(Code::Instruction(new_instr));
+
+                num
+            };
+
+            // entry_idx is the index which the assignment should point to
+
+            // if there is some destination, map it to the correct entry
+
+            self.remaps.insert(inst_dest, entry_num);
+
             // hash the expression into expr_val
             // also obtain the destination name inst_dest
-
-            // constant or values are the things we care about
-            } else {
-                // it's okay to put labels in unmodified
-                res.push(code.clone());
-            }
         }
         res
     }
