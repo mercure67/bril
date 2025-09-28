@@ -4,21 +4,6 @@ use bril_rs::*;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 
-pub fn successors<'a>(p: &'a CFGPos, cfg: &'a CFG) -> Option<&'a HashSet<CFGPos>> {
-    // return the successors of a given block in the CFG
-    cfg.get(p)
-}
-
-pub fn predecessors(p: &CFGPos, cfg: &CFG) -> Option<HashSet<CFGPos>> {
-    let mut res = HashSet::<CFGPos>::new();
-    for (k, v) in cfg.iter() {
-        if v.contains(p) {
-            res.insert(*k);
-        }
-    }
-    Some(res)
-}
-
 //TODO: we might need a more sophisticated type for variables in the future, but ah well
 pub(crate) trait DFDomainElement: Sized + PartialEq {
     fn merge(input_sets: &Vec<&Vec<Self>>) -> Vec<Self>;
@@ -42,22 +27,17 @@ where
         let mut wl = self.data.all_blocks();
         wl.sort();
         while !wl.is_empty() {
-            //for _i in 0..10 {
             let b = wl.pop().unwrap();
-            //println!("nr {}", b);
 
-            let pred = predecessors(&b, &cfg).unwrap();
-            //println!("pred {:?}", pred);
+            let pred = predecessors(&b, &cfg);
 
-            let m: Vec<&Vec<T>> = self
+            let to_merge: Vec<&Vec<T>> = self
                 .output_set
                 .iter()
                 .filter(|x| pred.contains(x.0))
                 .map(|x| x.1)
                 .collect();
-            //println!("{:?}", m);
-            self.input_set.insert(b, T::merge(&m));
-            //println!("-> {:?}", self.input_set.get(&b).unwrap());
+            self.input_set.insert(b, T::merge(&to_merge));
 
             let new_out = T::transfer(
                 self.input_set.get(&b).unwrap(),

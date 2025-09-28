@@ -56,6 +56,8 @@ pub struct FunctionData {
     pub returns: Vec<usize>,
 }
 
+// TODO: defns could probably be a hash map
+
 impl FunctionData {
     /// Populate the function metadata with information from the given Bril function.
     ///
@@ -135,6 +137,67 @@ impl FunctionData {
             self.blocks.push(block_range);
         }
         calls
+    }
+
+    pub fn local_cfg(&self, f: &bril_rs::Function) -> CFG {
+        let mut res = CFG::new();
+
+        for (blockno, block) in self.blocks.iter().enumerate() {
+            let mut block_res = HashSet::<CFGPos>::new();
+
+            let (start, end) = *block;
+            if start == end {
+                if blockno + 1 < self.blocks.len() {
+                    block_res.insert(CFGPos {
+                        funcno: self.funcno,
+                        blockno: blockno + 1,
+                    });
+                }
+                continue;
+            }
+            let terminator = &f.instrs[end - 1];
+
+            let Code::Instruction(instr) = terminator else {
+                continue;
+            };
+
+            let fallthrough = match instr {
+                Instruction::Effect { op, labels, .. } => match op {
+                    EffectOps::Jump | EffectOps::Branch => {
+                        let ext: Vec<CFGPos> = labels
+                            .iter()
+                            .map(|x| CFGPos {
+                                funcno: self.funcno,
+                                blockno: self.labels[x],
+                            })
+                            .collect();
+                        block_res.extend(ext);
+                        false
+                    }
+                    EffectOps::Return => false,
+                    _ => true,
+                },
+                Instruction::Value { .. } => true,
+                _ => true,
+            };
+
+            if fallthrough {
+                if blockno + 1 < self.blocks.len() {
+                    block_res.insert(CFGPos {
+                        funcno: self.funcno,
+                        blockno: blockno + 1,
+                    });
+                }
+            }
+
+            let k = CFGPos {
+                funcno: self.funcno,
+                blockno,
+            };
+            res.entry(k).or_default().extend(block_res);
+        }
+
+        res
     }
 }
 

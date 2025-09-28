@@ -1,16 +1,16 @@
 use bril_rs::*;
-use clap::{Parser, Subcommand, ValueEnum};
-use std::collections::{HashMap, HashSet};
-use std::rc::Rc;
+use clap::{Parser, Subcommand};
+use std::collections::HashMap;
 use std::{fs::File, io::BufReader};
 
 use crate::constprop::ConstProp;
-use crate::resolver::{Defn};
-use crate::util::{CFGPos, CFG};
+use crate::resolver::Defn;
+use crate::util::{CFG, CFGPos};
 
 mod constprop;
 mod data_flow;
 mod dce;
+mod global;
 mod lvn;
 mod reaching_defns;
 mod resolver;
@@ -23,6 +23,7 @@ enum Task {
     LVN,
     DFReaching,
     DFConst,
+    Global,
 }
 
 #[derive(Parser)]
@@ -34,8 +35,6 @@ struct Args {
     #[arg(value_hint = clap::ValueHint::FilePath)]
     filename: Option<std::path::PathBuf>,
 }
-
-// TODO: add in matching of names to blocks
 
 // cfg: handle returns?
 // -> get callers
@@ -76,7 +75,6 @@ fn main() {
     };
     d.initial_fill();
     d.form_blocks();
-    // d.print_blocks_compliance(&v);
 
     match args.task {
         Task::CFG => {
@@ -112,10 +110,20 @@ fn main() {
             w.worklist();
             w.print();
         }
-    };
+        Task::Global => {
+            d.print_blocks();
+            for (f, v) in d.data_map.iter() {
+                let mut gl = global::DomMapping::default();
+                gl.create_initial(v.funcno, v.blocks.len());
+                let c = v.local_cfg(&d.program.functions[v.funcno]);
+                d.print_cfg(&c);
+                gl.find_dominators(&c);
+                println!("func: {}", f);
+                println!("{}", gl);
 
-    //let c = d.form_cfg(&v);
-    // d.print_cfg(&v, &c);
-    //println!("{:?}", blocks);
-    //println!("{:?}", v.functions);
+                gl.create_tree(v.blocks.len());
+                println!("{:?}", gl.tree);
+            }
+        }
+    };
 }
