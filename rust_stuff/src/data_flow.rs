@@ -6,7 +6,7 @@ use std::fmt::Debug;
 
 //TODO: we might need a more sophisticated type for variables in the future, but ah well
 pub(crate) trait DFDomainElement: Sized + PartialEq {
-    fn merge(input_sets: &Vec<&Vec<Self>>) -> Vec<Self>;
+    fn merge(input_sets: Vec<&Vec<Self>>) -> Vec<Self>;
     fn transfer(input_set: &Vec<Self>, code: &[Code], d: &GlobalData, pos: CFGPos) -> Vec<Self>;
 }
 
@@ -37,7 +37,7 @@ where
                 .filter(|x| pred.contains(x.0))
                 .map(|x| x.1)
                 .collect();
-            self.input_set.insert(b, T::merge(&to_merge));
+            self.input_set.insert(b, T::merge(to_merge));
 
             let new_out = T::transfer(
                 self.input_set.get(&b).unwrap(),
@@ -47,12 +47,13 @@ where
             );
             //println!("=> {:?}", new_out);
             let existing = self.output_set.get(&b);
-            let mut is_diff = false;
-            if let None = existing {
-                is_diff = true;
-            } else if let Some(e) = existing {
-                is_diff = *e != *new_out;
-            }
+
+            let is_diff = if let Some(e) = existing {
+                *e != *new_out
+            } else {
+                true
+            };
+
             if is_diff {
                 let mut tmp: HashSet<CFGPos> = HashSet::from_iter(wl.into_iter());
                 tmp.extend(successors(&b, &cfg).unwrap().into_iter());

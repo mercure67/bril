@@ -184,7 +184,7 @@ impl LVNTable {
                 dest, op_type: t, ..
             }) = instr
             else {
-                res.push(code.clone());
+                res.push(code.clone()); // non-constants and values get pushed unmodified
                 continue;
             };
 

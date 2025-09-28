@@ -26,7 +26,7 @@ pub struct ConstProp {
 }
 
 impl DFDomainElement for ConstProp {
-    fn merge(input_sets: &Vec<&Vec<Self>>) -> Vec<Self> {
+    fn merge(input_sets: Vec<&Vec<Self>>) -> Vec<Self> {
         let mut set = HashSet::<Self>::new();
 
         for v in input_sets {
@@ -39,8 +39,6 @@ impl DFDomainElement for ConstProp {
             } else {
                 set = &set & &tmp;
             }
-
-            //set.extend(v.iter().cloned());
         }
         let mut tmp: Vec<Self> = set.into_iter().collect();
         tmp.sort();

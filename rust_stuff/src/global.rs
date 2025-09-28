@@ -2,10 +2,11 @@
 
 use crate::util::*;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, hash_map::Entry},
     fmt::Display,
 };
 
+// TODO: can probably use direct usize rather than cfgpos, considering function local
 #[derive(Default)]
 pub struct DomMapping {
     pub mapping: HashMap<CFGPos, HashSet<CFGPos>>,
@@ -44,6 +45,19 @@ impl DomMapping {
         }
     }
 
+    fn doms_within_scope(&self, p: &CFGPos) -> HashSet<CFGPos> {
+        // returns the dominators of a position from mapping, according to
+        // the current funcno
+        HashSet::from_iter(
+            self.mapping
+                .get(p)
+                .unwrap()
+                .iter()
+                .filter(|x| x.funcno == self.fno)
+                .cloned(),
+        )
+    }
+
     pub fn find_dominators(&mut self, c: &CFG) {
         let mut did_change = true;
         while did_change {
@@ -54,19 +68,13 @@ impl DomMapping {
                 let mut dom_isect =
                     predecessors(&v, c)
                         .iter()
-                        .fold(HashSet::<CFGPos>::new(), |mut acc, n| {
-                            if n.funcno == self.fno {
-                                let tmp = HashSet::from_iter(
-                                    self.mapping
-                                        .get(n)
-                                        .unwrap()
-                                        .iter()
-                                        .filter(|x| x.funcno == self.fno)
-                                        .cloned(),
-                                );
-                                acc = if acc.is_empty() { tmp } else { &acc & &tmp };
+                        .fold(HashSet::<CFGPos>::new(), |acc, n| {
+                            if n.funcno != self.fno {
+                                return acc;
                             }
-                            acc
+
+                            let tmp = self.doms_within_scope(n);
+                            if acc.is_empty() { tmp } else { &acc & &tmp }
                         });
 
                 dom_isect.insert(v.clone());
@@ -82,42 +90,50 @@ impl DomMapping {
 
     pub fn create_tree(&mut self, num_blocks: usize) {
         // this can maybe be done during initial dominator mapping creation, but ah well
+
+        // create an initial list of blocks to process
         let mut to_process: Vec<CFGPos> = (0..num_blocks)
+            .rev() //https://stackoverflow.com/questions/25170091/how-to-make-a-reverse-ordered-for-loop
             .map(|x| CFGPos {
                 funcno: self.fno,
                 blockno: x,
             })
             .collect();
-        to_process.sort();
-        // the first block will end up on top
-        while !to_process.is_empty() {
-            let curr = to_process.remove(0);
+
+        // entry will end up at end (top of stack)
+
+        while let Some(curr) = to_process.pop() {
             if self.tree.is_empty() {
                 self.tree.insert(curr, HashSet::<CFGPos>::new());
                 continue;
             }
             let mut dominators = self.mapping.get(&curr).unwrap().clone();
             dominators.retain(|x| *x != curr); // remove self
-            // every block should at least be dominated by block 0. if not, we have a problem
+            // every block should at least be dominated by block 0. if not, bad!!
+
+            // there perhaps exists a more efficient approach
             let mut deepest = self.entry;
-            while !dominators.is_empty() {
-                let possible_suc = self.tree.entry(deepest).or_insert(HashSet::<CFGPos>::new());
-                if possible_suc.is_empty() {
-                    break;
-                }
-                if let Some(e) = possible_suc
-                    .iter()
-                    .filter(|x| dominators.contains(x))
-                    .last()
-                {
-                    deepest = *e;
+            // while there is some non-empty route in the tree to go down,
+            while let Entry::Occupied(e) = self.tree.entry(deepest)
+                && !e.get().is_empty()
+            {
+                // if the entry contains some descendant in the dominators list, descent further
+                if let Some(v) = e.get().iter().filter(|x| dominators.contains(x)).last() {
+                    deepest = *v;
                 } else {
+                    // otherwise, suitable place to modify
                     break;
                 }
             }
-            self.tree.entry(deepest).and_modify(|e| {
-                e.insert(curr);
-            });
+            // deepest is either occupied or unoccupied.
+            // occupied implies adding curr as a descendant of something with descendants already
+            // unoccupied implies curr is the first descendant of something
+            self.tree
+                .entry(deepest)
+                .and_modify(|e| {
+                    e.insert(curr);
+                })
+                .or_insert(HashSet::from([curr]));
         }
     }
 }

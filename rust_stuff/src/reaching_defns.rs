@@ -20,12 +20,9 @@ impl DFDomainElement for Defn {
     ///
     /// # Returns
     /// A vector of unique `Defn` values, sorted.
-    fn merge(input_sets: &Vec<&Vec<Self>>) -> Vec<Self> {
-        let mut set = HashSet::new();
-        for v in input_sets {
-            set.extend(v.iter().cloned());
-        }
-        let mut vec: Vec<Self> = set.into_iter().collect();
+    fn merge(input_sets: Vec<&Vec<Self>>) -> Vec<Self> {
+        let set: HashSet<&Defn> = HashSet::from_iter(input_sets.into_iter().flatten());
+        let mut vec: Vec<Self> = set.into_iter().cloned().collect();
         vec.sort();
         vec
     }
@@ -46,7 +43,7 @@ impl DFDomainElement for Defn {
     /// # Returns
     /// The updated set of reaching definitions after the processed block.
     fn transfer(input_set: &Vec<Self>, code: &[Code], d: &GlobalData, pos: CFGPos) -> Vec<Self> {
-        let mut set: HashSet<Self> = input_set.iter().cloned().collect();
+        let mut set: HashSet<Self> = HashSet::from_iter(input_set.iter().cloned());
 
         let f = &d.program.functions[pos.funcno];
         let cr = d.get_func_data(&f.name).unwrap().blocks[pos.blockno];
