@@ -4,24 +4,43 @@ use bril_rs::*;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 
-//TODO: we might need a more sophisticated type for variables in the future, but ah well
+/// A domain element for dataflow analysis.
+///
+/// Must define:
+/// - Merging multiple sets of elements (meet)
+/// - Transfering within a CFG block (must be monotonic)
 pub(crate) trait DFDomainElement: Sized + PartialEq {
+    /// Merge multiple sets of elements into a single set.
+    ///
+    /// # Arguments
+    /// * `input_sets` – sets of elements to merge
     fn merge(input_sets: Vec<&Vec<Self>>) -> Vec<Self>;
+
+    /// Apply the transfer function for a single CFG block.
+    ///
+    /// # Arguments
+    /// * `input_set` – set of elements reaching the start of the block
+    /// * `code` – code in the block
+    /// * `d` – global program metadata
+    /// * `pos` – block’s position in the CFG
     fn transfer(input_set: &Vec<Self>, code: &[Code], d: &GlobalData, pos: CFGPos) -> Vec<Self>;
 }
 
+/// Configuration for a worklist-based dataflow analysis.
 pub struct WorklistConfig<'a, T: DFDomainElement> {
+    /// Set of input elements for each CFG block.
     pub input_set: HashMap<CFGPos, Vec<T>>,
+    /// Set of output elements for each CFG block.
     pub output_set: HashMap<CFGPos, Vec<T>>,
+    /// Reference to global program metadata.
     pub data: &'a mut GlobalData<'a>,
 }
-
-// TODO: best method for making merge, transfer overrideable? merge, transfer results in dynamic dispatch
 
 impl<'a, T> WorklistConfig<'a, T>
 where
     T: DFDomainElement + Debug,
 {
+    /// Run the worklist algorithm until fixpoint.
     pub fn worklist(&mut self) {
         let cfg = self.data.form_cfg();
         let mut wl = self.data.all_blocks();
@@ -45,7 +64,6 @@ where
                 self.data,
                 b,
             );
-            //println!("=> {:?}", new_out);
             let existing = self.output_set.get(&b);
 
             let is_diff = if let Some(e) = existing {
@@ -65,6 +83,7 @@ where
         }
     }
 
+    /// Print the current input and output sets for all blocks.
     pub fn print(&self) {
         let blocks = self.data.all_blocks();
 
