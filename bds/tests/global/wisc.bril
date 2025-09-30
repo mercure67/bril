@@ -1,0 +1,24 @@
+# https://pages.cs.wisc.edu/~fischer/cs701.f05/lectures/Lecture22.pdf
+@main(cond1: bool, cond2: bool): int {
+.a:
+    d: int = const 3;
+    br cond1 .b .f;
+.b:
+    a: int = const 47;
+    b: int = const 42;
+    br cond2 .c .d;
+.c:
+    b: int = const 1;
+    c: int = const 5;
+    jmp .e;
+.d:
+    a: int = const 2;
+    c: int = const 10;
+    jmp .e;
+.e:
+    d: int = sub a c;
+    jmp .f;
+.f:
+    print d;
+    ret;
+}

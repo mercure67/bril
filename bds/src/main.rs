@@ -122,7 +122,9 @@ fn main() {
                 println!("{}", gl);
 
                 gl.create_tree(v.blocks.len());
+                gl.populate_dominance_frontier(&c);
                 println!("{:?}", gl.tree);
+                println!("{:?}", gl.frontier);
             }
         }
     };

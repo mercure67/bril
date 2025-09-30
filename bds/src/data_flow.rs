@@ -3,6 +3,7 @@ use crate::util::*;
 use bril_rs::*;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
+use std::fmt::Display;
 
 /// A domain element for dataflow analysis.
 ///
@@ -27,7 +28,7 @@ pub(crate) trait DFDomainElement: Sized + PartialEq {
 }
 
 /// Configuration for a worklist-based dataflow analysis.
-pub struct WorklistConfig<'a, T: DFDomainElement> {
+pub struct WorklistConfig<'a, T: DFDomainElement + Display> {
     /// Set of input elements for each CFG block.
     pub input_set: HashMap<CFGPos, Vec<T>>,
     /// Set of output elements for each CFG block.
@@ -38,7 +39,7 @@ pub struct WorklistConfig<'a, T: DFDomainElement> {
 
 impl<'a, T> WorklistConfig<'a, T>
 where
-    T: DFDomainElement + Debug,
+    T: DFDomainElement + Debug + Display,
 {
     /// Run the worklist algorithm until fixpoint.
     pub fn worklist(&mut self) {
@@ -74,7 +75,7 @@ where
 
             if is_diff {
                 let mut tmp: HashSet<CFGPos> = HashSet::from_iter(wl.into_iter());
-                tmp.extend(successors(&b, &cfg).unwrap().into_iter());
+                tmp.extend(successors(&b, &cfg).cloned().unwrap_or_default().into_iter());
                 wl = tmp.into_iter().collect();
                 wl.sort();
             }
@@ -89,8 +90,26 @@ where
 
         for block in blocks {
             println!("block: {}", block);
-            println!("in: {:?}", self.input_set.get(&block).unwrap());
-            println!("out: {:?}", self.output_set.get(&block).unwrap());
+            println!(
+                "  in:  {}",
+                self.input_set
+                    .get(&block)
+                    .unwrap()
+                    .iter()
+                    .map(|c| c.to_string())
+                    .collect::<Vec<_>>()
+                    .join(",\n       ")
+            );
+            println!(
+                "  out: {}",
+                self.output_set
+                    .get(&block)
+                    .unwrap()
+                    .iter()
+                    .map(|c| c.to_string())
+                    .collect::<Vec<_>>()
+                    .join(",\n       ")
+            );
             println!();
         }
     }

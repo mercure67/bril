@@ -1,6 +1,8 @@
 use crate::{data_flow::DFDomainElement, resolver::GlobalData, util::CFGPos};
 use bril_rs::{Code, Instruction};
 use std::collections::{HashMap, HashSet};
+use std::fmt;
+use std::fmt::Display;
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug, Ord, PartialOrd)]
 pub enum CodeConst {
@@ -99,5 +101,21 @@ impl DFDomainElement for ConstProp {
         res.sort();
         //println!("{:?}", res);
         res
+    }
+}
+
+impl Display for CodeConst {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CodeConst::Bool { v } => write!(f, "{}", v),
+            CodeConst::Int { v } => write!(f, "{}", v),
+            CodeConst::NotImpl => write!(f, "<notimpl>"),
+        }
+    }
+}
+
+impl Display for ConstProp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}={}", self.name, self.val)
     }
 }

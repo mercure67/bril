@@ -20,5 +20,7 @@
 @main(n: int) {
 .main1:
   res: int = call @fact n;
+  jmp .main2;
+.main2:
   print res;
 }

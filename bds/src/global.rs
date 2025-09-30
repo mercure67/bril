@@ -11,7 +11,9 @@ use std::{
 pub struct DomMapping {
     pub mapping: HashMap<CFGPos, HashSet<CFGPos>>,
     pub tree: HashMap<CFGPos, HashSet<CFGPos>>,
+    pub imm_dominator: HashMap<CFGPos, CFGPos>,
     pub entry: CFGPos, // will almost always be the first block in the function. is exposed if override is necessary.
+    pub frontier: HashMap<CFGPos, HashSet<CFGPos>>,
     pub fno: usize,
 }
 
@@ -135,13 +137,39 @@ impl DomMapping {
                 })
                 .or_insert(HashSet::from([curr]));
         }
+        for (dom, children) in &self.tree {
+            for child in children {
+                self.imm_dominator.insert(child.clone(), dom.clone());
+            }
+        }
+    }
+
+    /// https://www.cs.tufts.edu/~nr/cs257/archive/keith-cooper/dom14.pdf
+    pub fn populate_dominance_frontier(&mut self, cfg: &CFG) {
+        for (b, succ) in cfg {
+            let pred = predecessors(b, cfg);
+            if pred.len() < 2 {
+                continue;
+            }
+            for p in pred {
+                let mut runner = p;
+                while runner != self.imm_dominator.get(b).unwrap().clone() {
+                    self.frontier
+                        .entry(runner.clone())
+                        .or_insert_with(HashSet::new)
+                        .insert(b.clone());
+                    runner = self.imm_dominator.get(&runner).unwrap().clone()
+                }
+            }
+        }
     }
 }
 
 impl Display for DomMapping {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        println!();
         for (k, v) in self.mapping.iter() {
-            f.write_fmt(format_args!("{} ->", k))?;
+            f.write_fmt(format_args!("{} -> ", k))?;
             for p in v {
                 f.write_fmt(format_args!("{} ", p))?;
             }

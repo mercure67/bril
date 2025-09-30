@@ -3,6 +3,8 @@ use crate::resolver::{Defn, GlobalData};
 use crate::util::CFGPos;
 use bril_rs::Code;
 use std::collections::HashSet;
+use std::fmt;
+use std::fmt::Display;
 
 /// Implementation of the `DFDomainElement` trait for `Defn`.
 ///
@@ -58,5 +60,11 @@ impl DFDomainElement for Defn {
         let mut vec: Vec<Self> = set.into_iter().collect();
         vec.sort();
         vec
+    }
+}
+
+impl Display for Defn {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}={}", self.var, self.name)
     }
 }
