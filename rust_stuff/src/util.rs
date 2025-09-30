@@ -18,11 +18,21 @@ impl std::fmt::Display for CFGPos {
 }
 
 pub type CFG = HashMap<CFGPos, HashSet<CFGPos>>;
+
+/// Return successors of a given block in the CFG.
+///
+/// # Arguments
+/// * `p` – position of the block
+/// * `cfg` – CFG
 pub fn successors<'a>(p: &'a CFGPos, cfg: &'a CFG) -> Option<&'a HashSet<CFGPos>> {
-    // return the successors of a given block in the CFG
     cfg.get(p)
 }
 
+/// Return predecessors of a given block in the CFG.
+///
+/// # Arguments
+/// * `p` – position of the block
+/// * `cfg` – CFG
 pub fn predecessors(p: &CFGPos, cfg: &CFG) -> HashSet<CFGPos> {
     let mut res = HashSet::<CFGPos>::new();
     for (k, v) in cfg.iter() {
