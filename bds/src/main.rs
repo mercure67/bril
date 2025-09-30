@@ -119,12 +119,16 @@ fn main() {
                 d.print_cfg(&c);
                 gl.find_dominators(&c);
                 println!("func: {}", f);
-                println!("{}", gl);
-
+                gl.print_mapping();
+                println!();
                 gl.create_tree(v.blocks.len());
+                gl.print_tree();
+                println!();
+
                 gl.populate_dominance_frontier(&c);
-                println!("{:?}", gl.tree);
-                println!("{:?}", gl.frontier);
+
+                gl.print_frontier();
+                println!();
             }
         }
     };

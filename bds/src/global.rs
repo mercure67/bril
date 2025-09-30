@@ -163,18 +163,37 @@ impl DomMapping {
             }
         }
     }
-}
 
-impl Display for DomMapping {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        println!();
+    pub fn print_mapping(&self) {
+        println!("dominance mapping:");
         for (k, v) in self.mapping.iter() {
-            f.write_fmt(format_args!("{} -> ", k))?;
+            print!("{} -> ", k);
             for p in v {
-                f.write_fmt(format_args!("{} ", p))?;
+                print!("{} ", p);
             }
-            f.write_str("\n")?;
+            print!("\n");
         }
-        Ok(())
+    }
+
+    pub fn print_tree(&self) {
+        println!("tree:");
+        for (k, v) in self.tree.iter() {
+            print!("{} -> ", k);
+            for p in v {
+                print!("{} ", p);
+            }
+            print!("\n");
+        }
+    }
+
+    pub fn print_frontier(&self) {
+        println!("frontier: ");
+        for (k, v) in self.frontier.iter() {
+            print!("{}: ", k);
+            for p in v {
+                print!("{} ", p);
+            }
+            print!("\n");
+        }
     }
 }
