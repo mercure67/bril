@@ -197,7 +197,7 @@ main is pretty straightforward.
 
 the ``ack`` function can either return in b1, b3, or b4. b0 splits into either b1 or b2, which is reflected in the output. b2 is the 'gate' for b3 and b4, which is also reflected. no back-edges or joining points so empty frontier.
 
-## ``wisc``
+### ``wisc``
 
 <p align="center">
 <img width="600" alt="little.bril" src="../tests/global/wisc.png" /></br>
