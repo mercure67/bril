@@ -12,7 +12,7 @@ invocation: ``bril2json < ../benchmarks/core/gcd.bril | target/debug/rust_stuff 
 
 <p align="center">
 <img width="300" alt="gcd.bril" src="../tests/global/gcd.png" /></br>
-<b>Figure 2:</b> CFG for <code>gcd.bril</code>.
+<b>Figure 1:</b> CFG for <code>gcd.bril</code>.
 </p>
 
 output:
@@ -70,7 +70,7 @@ for the frontier, blocks 2 and 3 both feed into block 4, so each gets block 4 in
 
 <p align="center">
 <img width="600" alt="armstrong.bril" src="../tests/global/armstrong.png" /></br>
-<b>Figure 3:</b> CFG for <code>armstrong.bril</code>.
+<b>Figure 2:</b> CFG for <code>armstrong.bril</code>.
 </p>
 
 output:
