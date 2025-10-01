@@ -75,7 +75,12 @@ where
 
             if is_diff {
                 let mut tmp: HashSet<CFGPos> = HashSet::from_iter(wl.into_iter());
-                tmp.extend(successors(&b, &cfg).cloned().unwrap_or_default().into_iter());
+                tmp.extend(
+                    successors(&b, &cfg)
+                        .cloned()
+                        .unwrap_or_default()
+                        .into_iter(),
+                );
                 wl = tmp.into_iter().collect();
                 wl.sort();
             }

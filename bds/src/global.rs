@@ -148,12 +148,9 @@ impl DomMapping {
     pub fn populate_dominance_frontier(&mut self, cfg: &CFG) {
         for (b, succ) in cfg {
             let pred = predecessors(b, cfg);
-            if pred.len() < 2 {
-                continue;
-            }
             for p in pred {
                 let mut runner = p;
-                while runner != self.imm_dominator.get(b).unwrap().clone() {
+                while runner != self.imm_dominator[&b] && runner != *b {
                     self.frontier
                         .entry(runner.clone())
                         .or_insert_with(HashSet::new)
@@ -164,22 +161,30 @@ impl DomMapping {
         }
     }
 
-    pub fn print_mapping(&self) {
-        println!("dominance mapping:");
-        for (k, v) in self.mapping.iter() {
-            print!("{} -> ", k);
-            for p in v {
-                print!("{} ", p);
-            }
-            print!("\n");
+pub fn print_mapping(&self) {
+    println!("dominance mapping:");
+    let mut entries: Vec<_> = self.mapping.iter().collect();
+    entries.sort_by_key(|(k, _)| (k.funcno, k.blockno));
+    for (k, v) in entries {
+        print!("{} -> ", k);
+        let mut blocks: Vec<_> = v.iter().collect();
+        blocks.sort_by_key(|p| (p.funcno, p.blockno));
+        for p in blocks {
+            print!("{} ", p);
         }
+        println!();
     }
+}
 
     pub fn print_tree(&self) {
         println!("tree:");
-        for (k, v) in self.tree.iter() {
+        let mut entries: Vec<_> = self.tree.iter().collect();
+        entries.sort_by_key(|(k, _)| (k.funcno, k.blockno));
+        for (k, v) in entries {
             print!("{} -> ", k);
-            for p in v {
+            let mut blocks: Vec<_> = v.iter().collect();
+            blocks.sort_by_key(|p| (p.funcno, p.blockno));
+            for p in blocks {
                 print!("{} ", p);
             }
             print!("\n");
@@ -187,13 +192,17 @@ impl DomMapping {
     }
 
     pub fn print_frontier(&self) {
-        println!("frontier: ");
-        for (k, v) in self.frontier.iter() {
+        println!("frontier:");
+        let mut entries: Vec<_> = self.frontier.iter().collect();
+        entries.sort_by_key(|(k, _)| (k.funcno, k.blockno));
+        for (k, v) in entries {
             print!("{}: ", k);
-            for p in v {
+            let mut blocks: Vec<_> = v.iter().collect();
+            blocks.sort_by_key(|p| (p.funcno, p.blockno));
+            for p in blocks {
                 print!("{} ", p);
             }
-            print!("\n");
+            println!();
         }
     }
 }
