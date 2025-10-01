@@ -161,20 +161,21 @@ impl DomMapping {
         }
     }
 
-pub fn print_mapping(&self) {
-    println!("dominance mapping:");
-    let mut entries: Vec<_> = self.mapping.iter().collect();
-    entries.sort_by_key(|(k, _)| (k.funcno, k.blockno));
-    for (k, v) in entries {
-        print!("{} -> ", k);
-        let mut blocks: Vec<_> = v.iter().collect();
-        blocks.sort_by_key(|p| (p.funcno, p.blockno));
-        for p in blocks {
-            print!("{} ", p);
+    // TODO: below three all kind of use the same behaviour
+    pub fn print_mapping(&self) {
+        println!("dominance mapping:");
+        let mut entries: Vec<_> = self.mapping.iter().collect();
+        entries.sort_by_key(|(k, _)| (k.funcno, k.blockno));
+        for (k, v) in entries {
+            print!("{} -> ", k);
+            let mut blocks: Vec<_> = v.iter().collect();
+            blocks.sort_by_key(|p| (p.funcno, p.blockno));
+            for p in blocks {
+                print!("{} ", p);
+            }
+            println!();
         }
-        println!();
     }
-}
 
     pub fn print_tree(&self) {
         println!("tree:");

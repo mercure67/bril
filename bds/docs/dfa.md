@@ -11,7 +11,7 @@ We built a generic dataflow analysis infrastructure, as well as implementations 
 
 We tested our implementation of the DFA algorithm for reaching definitions on two programs: `little.bril` (the diamond example from lecture), and `rec.bril` (a small recursive factorial implementation).
 
-Here's the output of `bril2json < tests/dfa/reaching/little.bril | target/debug/rust_stuff df-reaching`. Note that parameters are recorded at the outgoing set of the first block of each function.
+Here's the output of `bril2json < tests/dfa/reaching/little.bril | target/debug/bds df-reaching`. Note that parameters are recorded at the outgoing set of the first block of each function.
 
 <details>
 <summary>Output</summary>

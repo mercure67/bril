@@ -5,13 +5,14 @@ use std::{fs::File, io::BufReader};
 
 use crate::constprop::ConstProp;
 use crate::resolver::Defn;
-use crate::util::{CFG, CFGPos};
+use crate::util::CFGPos;
 
 mod constprop;
 mod data_flow;
 mod dce;
 mod global;
 mod lvn;
+mod pass;
 mod reaching_defns;
 mod resolver;
 mod util;

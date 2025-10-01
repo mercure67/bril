@@ -11,7 +11,7 @@ pipeline = [
 [runs.lvn]
 pipeline = [
     "bril2json",
-    "target/debug/rust_stuff lvn",
+    "target/debug/bds lvn",
     "bril2json",
     "brili -p {args}",
 ]

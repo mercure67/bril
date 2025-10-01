@@ -8,10 +8,10 @@ BDS can be built with `cargo build` and run as follows:
 
 ```sh
 # Run in file mode
-target/debug/rust_stuff <path/to/program>.json {dce,lvn,df-reaching,df-const}
+target/debug/bds <path/to/program>.json {dce,lvn,df-reaching,df-const}
 
 # Run in pipe mode from a '.bril' file
-bril2json < <path/to/program>.bril | target/debug/rust_stuff {dce,lvn,df-reaching,df-const}
+bril2json < <path/to/program>.bril | target/debug/bds {dce,lvn,df-reaching,df-const}
 ```
 
 ## Implemented modes

@@ -8,7 +8,7 @@ in the following, dominance mapping lists which nodes dominate the given node. t
 
 ### ``gcd``
 
-invocation: ``bril2json < ../benchmarks/core/gcd.bril | target/debug/rust_stuff global``
+invocation: ``bril2json < ../benchmarks/core/gcd.bril | target/debug/bds global``
 
 <p align="center">
 <img width="300" alt="gcd.bril" src="../tests/global/gcd.png" /></br>

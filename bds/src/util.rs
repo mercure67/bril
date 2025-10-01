@@ -45,6 +45,8 @@ pub fn predecessors(p: &CFGPos, cfg: &CFG) -> HashSet<CFGPos> {
 
 pub fn postorder(cfg: &CFG, root: &CFGPos) -> Vec<CFGPos> {
     // https://eli.thegreenplace.net/2015/directed-graph-traversal-orderings-and-applications-to-data-flow-analysis/
+    //
+    // there is probably some way to make this non-recursive, but ah well
     let mut visited = HashSet::<CFGPos>::new();
     let mut res = Vec::<CFGPos>::new();
 
