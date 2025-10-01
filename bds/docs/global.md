@@ -4,25 +4,14 @@ We implemented some tools for global analysis, including those related to basic 
 
 ## Testing
 
-<p align="center">
-<img width="800" alt="little.bril" src="../tests/global/wisc.png" /></br>
-<b>Figure 1:</b> CFG, dominance tree and frontier for <code>wisc.bril</code>.
-</p>
-
-We first tested our dominator tree and frontier algorithms against an example from the compilers course CS 701 at University of Wisconsin.[^wisc]
-
-## test traces
-
-in the following, dominance mapping lists which nodes dominate the given node.
-
-tree lists which nodes are children of the given node.
+in the following, dominance mapping lists which nodes dominate the given node. tree lists which nodes are children of the given node. finally, we print the dominance frontier for nodes which have one (may be none).
 
 ### ``gcd``
 
 invocation: ``bril2json < ../benchmarks/core/gcd.bril | target/debug/rust_stuff global``
 
 <p align="center">
-<img width="500" alt="gcd.bril" src="../tests/global/gcd.png" /></br>
+<img width="300" alt="gcd.bril" src="../tests/global/gcd.png" /></br>
 <b>Figure 2:</b> CFG for <code>gcd.bril</code>.
 </p>
 
@@ -80,7 +69,7 @@ for the frontier, blocks 2 and 3 both feed into block 4, so each gets block 4 in
 ### ``armstrong``
 
 <p align="center">
-<img width="800" alt="armstrong.bril" src="../tests/global/armstrong.png" /></br>
+<img width="600" alt="armstrong.bril" src="../tests/global/armstrong.png" /></br>
 <b>Figure 3:</b> CFG for <code>armstrong.bril</code>.
 </p>
 
@@ -163,7 +152,7 @@ the ``main`` function has a pretty simple structure where b0 dominates b1 and b1
 ### ``ackermann``
 
 <p align="center">
-<img width="600" alt="ackermann.bril" src="../tests/global/ackermann.png" /></br>
+<img width="400" alt="ackermann.bril" src="../tests/global/ackermann.png" /></br>
 <b>Figure 3:</b> CFG for <code>ackermann.bril</code>.
 </p>
 
@@ -207,6 +196,46 @@ frontier:
 main is pretty straightforward.
 
 the ``ack`` function can either return in b1, b3, or b4. b0 splits into either b1 or b2, which is reflected in the output. b2 is the 'gate' for b3 and b4, which is also reflected. no back-edges or joining points so empty frontier.
+
+## ``wisc``
+
+<p align="center">
+<img width="600" alt="little.bril" src="../tests/global/wisc.png" /></br>
+<b>Figure 4:</b> CFG, dominance tree and frontier for <code>wisc.bril</code>.
+</p>
+
+we tested our dominator tree and frontier algorithms against an example from the compilers course CS 701 at University of Wisconsin.[^wisc] they provided the correct solution, which matches our output:
+
+<details>
+<summary>Output</summary>
+
+```
+main: block 0 -> main.b1 main.b5
+main: block 3 -> main.b4
+main: block 4 -> main.b5
+main: block 5 ->
+main: block 1 -> main.b3 main.b2
+main: block 2 -> main.b4
+func: main
+dominance mapping:
+f0.b0 -> f0.b0 
+f0.b1 -> f0.b0 f0.b1 
+f0.b2 -> f0.b0 f0.b1 f0.b2 
+f0.b3 -> f0.b0 f0.b1 f0.b3 
+f0.b4 -> f0.b0 f0.b1 f0.b4 
+f0.b5 -> f0.b0 f0.b5 
+
+tree:
+f0.b0 -> f0.b1 f0.b5 
+f0.b1 -> f0.b2 f0.b3 f0.b4 
+
+frontier:
+f0.b1: f0.b5 
+f0.b2: f0.b4 
+f0.b3: f0.b4 
+f0.b4: f0.b5 
+```
+</details>
 
 ## References
 
